@@ -1,4 +1,19 @@
-# NexusLoss
+# ⚡ NexusLoss
+
+> **Analitik gradyanlar. Sıfır çalışma zamanı bağımlılığı. Maksimum kontrol.**
+
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/20)
+[![Header-only](https://img.shields.io/badge/header--only-yes-c9ff38?style=for-the-badge&labelColor=111817)](include/nexusloss/nexusloss.hpp)
+[![License](https://img.shields.io/badge/license-Apache--2.0-D22128?style=for-the-badge&logo=apache)](LICENSE)
+[![CPU first](https://img.shields.io/badge/compute-CPU--first-62e7d4?style=for-the-badge)](#performans-mimarisi)
+
+**NexusLoss**, makine öğrenmesi eğitim döngülerindeki kayıp fonksiyonlarını ve analitik gradyanlarını sade, hızlı ve şeffaf bir C++20 API'siyle sunar. Tek bir `#include`, güçlü bir sözleşme ve modeliniz üzerinde tam kontrol. 🚀
+
+<p align="center">
+  <img src="https://img.shields.io/badge/13%20loss%20families-88%20API%20records-c9ff38?style=flat-square" alt="13 loss families and 88 API records" />
+  <img src="https://img.shields.io/badge/third--party%20runtime%20deps-0-62e7d4?style=flat-square" alt="Zero third-party runtime dependencies" />
+  <img src="https://img.shields.io/badge/gradients-analytic-ffffff?style=flat-square&labelColor=111817" alt="Analytic gradients" />
+</p>
 
 Bu proje, Bursa Teknik Üniversitesi Bilgisayar Mühendisliği 1. sınıf öğrencisi **Muhammed Fatih Şahin** tarafından geliştirilmiştir.
 
@@ -8,25 +23,26 @@ Ağırlık güncellemesi NexusOptim'e, veri NexusData'ya, katman NexusModel'e, a
 
 Dokümantasyon sitesi aynı depoda, `docs/website` altındadır. Teknik referansın basılı kopyası `docs/NexusLoss.pdf` dosyasıdır. Bu dosyanın kaynak sayfası `docs/NexusLoss.html`dir.
 
-## İçindekiler
+## 🧭 İçindekiler
 
-- [Ne işe yarar](#ne-işe-yarar)
-- [İçinde ne var](#içinde-ne-var)
-- [Performans mimarisi](#performans-mimarisi)
-- [Klasör ve dosya yapısı](#klasör-ve-dosya-yapısı)
-- [Kurulum](#kurulum)
-- [Hızlı başlangıç](#hızlı-başlangıç)
-- [Sözleşme](#sözleşme)
-- [İndirgeme ve ağırlık](#indirgeme-ve-ağırlık)
-- [Sayısal kararlılık](#sayısal-kararlılık)
-- [Hangi kaybı seçmeli](#hangi-kaybı-seçmeli)
-- [Kayıp kataloğu](#kayıp-kataloğu)
-- [Şekil ve kodlama kuralları](#şekil-ve-kodlama-kuralları)
-- [Test](#test)
-- [Dokümantasyon sitesi](#dokümantasyon-sitesi)
-- [Sık karşılaşılan hatalar](#sık-karşılaşılan-hatalar)
+- [🎯 Ne işe yarar](#ne-işe-yarar)
+- [🧰 İçinde ne var](#içinde-ne-var)
+- [⚙️ Performans mimarisi](#performans-mimarisi)
+- [🗂️ Klasör ve dosya yapısı](#klasör-ve-dosya-yapısı)
+- [📦 Kurulum](#kurulum)
+- [🚀 Hızlı başlangıç](#hızlı-başlangıç)
+- [📐 Sözleşme](#sözleşme)
+- [📊 İndirgeme ve ağırlık](#indirgeme-ve-ağırlık)
+- [🧮 Sayısal kararlılık](#sayısal-kararlılık)
+- [🧭 Hangi kaybı seçmeli](#hangi-kaybı-seçmeli)
+- [📚 Kayıp kataloğu](#kayıp-kataloğu)
+- [🧩 Şekil ve kodlama kuralları](#şekil-ve-kodlama-kuralları)
+- [✅ Test](#test)
+- [🌐 Dokümantasyon sitesi](#dokümantasyon-sitesi)
+- [🛠️ Sık karşılaşılan hatalar](#sık-karşılaşılan-hatalar)
+- [📄 Lisans](#lisans)
 
-## Ne işe yarar
+## 🎯 Ne işe yarar
 
 Bir eğitim adımı dört parçaya ayrılır. Veri gelir, model bir tahmin üretir, kayıp o tahmini hedefle karşılaştırır, eniyileyici ağırlığı gradyan yönünde günceller. NexusLoss yalnızca üçüncü parçadır.
 
@@ -49,7 +65,7 @@ Dönen vektör bir autograd düğümü değildir. Çağıran bu vektörü modele
 
 **Yapısal kayıplar** `LossBase`tan türemez. Kutu, CTC, nokta bulutu, liste sıralaması ve tek örnekli çok sınıflı çapraz entropi kendi `forward` / `backward` imzasını kullanır. Zorla düz vektöre indirgenmedikleri için şekil bilgisi (zaman, sınıf, kutu köşesi, nokta boyutu) kaybolmaz.
 
-## İçinde ne var
+## 🧰 İçinde ne var
 
 On üç aile, başlık dosyalarında sınıf ve serbest fonksiyon olarak durur. Dokümantasyon sitesi bu kümeyi **88 kayıt** olarak indeksler. Kayıtların bir kısmı sınıf, bir kısmı aynı formülün serbest fonksiyonudur. Asıl kaynak `include/nexusloss/losses/` altındaki başlıklardır.
 
@@ -76,7 +92,7 @@ On üç aile, başlık dosyalarında sınıf ve serbest fonksiyon olarak durur. 
 
 Tek giriş noktası `nexusloss/nexusloss.hpp`dir. Bu başlık hesap yapmaz; çekirdeği ve on üç aileyi birlikte açar.
 
-## Performans mimarisi
+## ⚙️ Performans mimarisi
 
 Hız, ayrı bir iş parçacığı havuzundan veya elle yazılmış SIMD çekirdeğinden gelmez. Döngüler skaler ve taşınabilirdir. `-O3` veya MSVC eşdeğeri altında derleyici bunları otomatik vektörleyebilir; kütüphane buna söz vermez. Tasarımın kazancı bağımlılıksız, satır içi ve tahminsiz bir sıcak yoldur.
 
@@ -92,7 +108,7 @@ Hız, ayrı bir iş parçacığı havuzundan veya elle yazılmış SIMD çekirde
 
 Derleyici uyarıları arayüzle birlikte gelir: MSVC'de `/W4 /utf-8`, diğer derleyicilerde `-Wall -Wextra -Wpedantic`. Standart uzantıları kapalıdır (`CMAKE_CXX_EXTENSIONS OFF`).
 
-## Klasör ve dosya yapısı
+## 🗂️ Klasör ve dosya yapısı
 
 ```
 NexusLoss/
@@ -148,7 +164,7 @@ NexusLoss/
 
 `build/` ve `cmake-build-debug/` CMake üretimidir. Kaynak ağacının parçası sayılmaz. `docs/website` ayrı bir Node projesidir; C++ kütüphanesinin derlemesine girmez.
 
-## Kurulum
+## 📦 Kurulum
 
 İsterler: CMake 3.20 veya üzeri, C++20 derleyicisi. Kütüphanenin kendisi için ağ bağlantısı gerekmez. Testler açıkken GoogleTest v1.14.0 yapılandırma sırasında indirilir.
 
@@ -183,7 +199,7 @@ Tek yapılandırmalı üreteçlerde (Ninja, Makefiles) `Release` alt klasörü o
 
 Kurulum hedefi (`install`) tanımlı değildir. Tüketici ya `add_subdirectory` kullanır ya da `include/` yolunu derleyiciye verir.
 
-## Hızlı başlangıç
+## 🚀 Hızlı başlangıç
 
 Depodaki `examples/main.cpp` üç aileyi aynı programda çalıştırır.
 
@@ -238,7 +254,7 @@ const std::vector<double> grad = mae.backward();
 
 `Mean` paydası ağırlık toplamıdır. `Sum` ve `None` ağırlığı eleman eleman çarpar.
 
-## Sözleşme
+## 📐 Sözleşme
 
 `LossBase<T>` için çağrı sırası:
 
@@ -259,7 +275,7 @@ Boş span `check_same_size` içinde `std::invalid_argument` olur. `pred` ve `tar
 
 Yapısal kayıplar kendi önbelleğini tutar. Ortak kural değişmez: `backward`, o nesnenin son `forward`una bakar. Serbest fonksiyonlar (`ciou_loss`, `info_nce_loss`, `cox_ph_loss`) nesne tutmaz; değeri hemen döndürür. Gradyan gerekiyorsa eşlenik `*_gradient` fonksiyonunu veya sınıfın `backward`unu kullanın.
 
-## İndirgeme ve ağırlık
+## 📊 İndirgeme ve ağırlık
 
 `apply_reduction` üç özet üretir.
 
@@ -271,7 +287,7 @@ Gradyan ölçeği kayıp ölçeğiyle aynıdır. MSE'de eleman türevi `2(pred -
 
 Sınıf dengesinde eleman ağırlığı yetmeyebilir. `classification::effective_number_class_weights` etkin sayı formülüyle sınıf ağırlığı üretir; `weighted_categorical_cross_entropy` ve `weighted_binary_cross_entropy` bu ağırlığı kayba taşır.
 
-## Sayısal kararlılık
+## 🧮 Sayısal kararlılık
 
 `core::epsilon<T>` şablon sabitidir ve `1e-7`dir. `float` ile `double` aynı eşiği kullanır; `double` için daha dar bir eşik tanımlanmamıştır.
 
@@ -289,7 +305,7 @@ Sınıf dengesinde eleman ağırlığı yetmeyebilir. `classification::effective
 
 Poisson kaybı tahmin olarak **log-oran** bekler. Tweedie kaybı `1 < power < 2` ve pozitif ortalama ile birim dağılımlı sapma hesaplar. Aralık dışındaki güç tanımsızdır; çağıran gücü bu aralıkta vermelidir.
 
-## Hangi kaybı seçmeli
+## 🧭 Hangi kaybı seçmeli
 
 | Eldeki problem | Başlangıç kaybı | Sapınca |
 | --- | --- | --- |
@@ -314,9 +330,9 @@ Poisson kaybı tahmin olarak **log-oran** bekler. Tweedie kaybı `1 < power < 2`
 
 Bu tablo başlangıç seçimidir. Her kaybın kabul ettiği tensör şekli bir sonraki bölümdedir. Yanlış şekil derlenmeyebilir veya sessizce yanlış ölçek üretir.
 
-## Kayıp kataloğu
+## 📚 Kayıp kataloğu
 
-### Regresyon — `nexusloss`
+### 📈 Regresyon — `nexusloss`
 
 Hepsi `LossBase<T>`tır. Kurucu indirgeme alır; Huber, Quantile, Poisson, Tweedie, Cauchy, Charbonnier ve Tukey ek parametre taşır.
 
@@ -334,7 +350,7 @@ Hepsi `LossBase<T>`tır. Kurucu indirgeme alır; Huber, Quantile, Poisson, Tweed
 | `CharbonnierLoss` | yumuşatılmış L1 | `sqrt(diff² + eps²)` ailesi |
 | `TukeyBiweightLoss` | eşik dışında gradyan sıfır | |
 
-### Sınıflandırma
+### 🏷️ Sınıflandırma
 
 `nexusloss` içindeki eleman bazlı sınıflar `LossBase`tır: `BCELoss`, `BCEWithLogitsLoss`, `HingeLoss`, `SquaredHingeLoss`, `ExponentialLoss`, `PerceptronLoss`, `ZeroOneLoss`, `FocalLoss`.
 
@@ -344,7 +360,7 @@ Serbest fonksiyonlar: `binary_cross_entropy`, `binary_cross_entropy_with_logits`
 
 `HingeLoss`, `SquaredHingeLoss`, `PerceptronLoss`, `ExponentialLoss` ve `ZeroOneLoss` hedefi **−1 ve +1** bekler. `BCELoss` hedefi **[0, 1]** bekler. İkisini karıştırmak kaybı sayısal olarak üretir ve yanlış yönde gradyan verir.
 
-### Segmentasyon — `nexusloss::segmentation`
+### 🖼️ Segmentasyon — `nexusloss::segmentation`
 
 Sınıflar: `DiceLoss`, `IoULoss`, `TverskyLoss`, `FocalTverskyLoss`, `LovaszSoftmaxLoss`.
 
@@ -352,13 +368,13 @@ Serbest fonksiyonlar: `dice_loss`, `iou_loss`, `tversky_loss`, `focal_tversky_lo
 
 Yumuşak maskeler olasılıktır. İstisna: Lovász-hinge logit ister, Lovász-softmax piksel-major olasılık ve sınıf indeksi ister. `hausdorff_distance_loss` uzaklık dönüşümü çalıştırmaz; çağıran sınır mesafe haritasını verir.
 
-### Tespit — `nexusloss::detection`
+### 🎯 Tespit — `nexusloss::detection`
 
 Örtüşme: `iou`, `iou_loss`, `giou_loss`, `diou_loss`, `ciou_loss` ve `*_loss_gradient`. Sınıflar: `IoULoss`, `GIoULoss`, `DIoULoss`, `CIoULoss`.
 
 Kutu sırası `[x_min, y_min, x_max, y_max]`dir. `DetectionFocalLoss` logit alır; alfa öntanımlı `0.25`, gama `2`. `SmoothL1BBoxLoss` kodlanmış kutu ofsetleri içindir; beta öntanımlı `1`. Bu sınıf regresyon başlığındaki `HuberLoss` ile aynı tensörü beklemez.
 
-### Metrik öğrenme — `nexusloss::metric`
+### 🧠 Metrik öğrenme — `nexusloss::metric`
 
 Sınıflar: `ContrastiveLoss`, `TripletLoss`, `ArcFaceLoss` (marj `0.5`, ölçek `64`), `CosFaceLoss` (marj `0.35`, ölçek `64`).
 
@@ -366,13 +382,13 @@ Serbest fonksiyonlar: `contrastive_loss`, `cosine_embedding_loss`, `triplet_loss
 
 `margin_ranking_loss` bu başlıkta da vardır; sıralama ailesindeki `MarginRankingLoss` ile aynı işin sınıf karşılığı `ranking` içindedir.
 
-### Sıralama — `nexusloss::ranking`
+### 🥇 Sıralama — `nexusloss::ranking`
 
 Sınıflar: `MarginRankingLoss`, `RankNetLoss`, `ListNetLoss`, `ListMLELoss`.
 
 Serbest fonksiyonlar: `bpr_loss`, `approx_ndcg_loss`, `soft_rank_loss` (`approx_ndcg_loss` çağrısıdır), `lambda_rank_loss`, `pairwise_logistic`, `listnet_loss`, `listmle_loss`. Yüksek skor daha iyidir. Liste fonksiyonları bir sorgunun aday skorlarını birlikte görür; eleman bazlı `LossBase`a bölünmez.
 
-### Üretken modeller — `nexusloss::generative`
+### ✨ Üretken modeller — `nexusloss::generative`
 
 Sınıflar: `AdversarialLoss`, `WassersteinLoss`, `LSGANLoss`, `VAEELBOLoss`.
 
@@ -380,25 +396,25 @@ Serbest fonksiyonlar: `wasserstein_discriminator_loss`, `wasserstein_generator_l
 
 `perceptual_loss` ve `style_loss` VGG çalıştırmaz. Çağıran öznitelik vektörünü verir. `total_variation_loss` görüntüsü satır-major ve kanal-sondadır: indeks `(y * W + x) * C + c`. `diffusion_epsilon_loss` gürültü ile tahminin kare farkının ortalamasıdır (`l2_loss` üzerinden). Ayırt edici ve üretici gradyanları ayrı fonksiyonlardır; tek vektörde karışmaz.
 
-### Öz-denetimli — `nexusloss::self_supervised`
+### 🔁 Öz-denetimli — `nexusloss::self_supervised`
 
 Sınıflar: `InfoNCELoss` (sıcaklık öntanımlı `0.1`), onun alt sınıfı `NTXentLoss`, `BYOLLoss`, `BarlowTwinsLoss`.
 
 Serbest fonksiyonlar: `info_nce_loss`, `nt_xent_loss`, `byol_loss`, `dino_loss`, `barlow_twins_loss`, `vicreg_loss`. InfoNCE pozitif skoru ve negatif skorların listesini alır. DINO ve VICReg öznitelik istatistiğini çağıranın verdiği vektörler üzerinde hesaplar; artırma hattı bu depoda yoktur.
 
-### Damıtım — `nexusloss::distillation`
+### 🎓 Damıtım — `nexusloss::distillation`
 
 `KnowledgeDistillationLoss` sıcaklığın karesi ile ölçeklenmiş KL kullanır. `FeatureDistillationLoss` öğrenci ve öğretmen özniteliklerini karşılaştırır. `AttentionTransferLoss` dikkat haritalarını karşılaştırır. Üçü de öğretmeni eğitmez; öğretmen çıktısı sabittir ve çağıran tarafından verilir.
 
-### Dizi — `nexusloss::sequence`
+### 🔤 Dizi — `nexusloss::sequence`
 
 `CTCLoss` zaman-major logit bekler: düzen `[zaman, sınıf]`. Boşluk sınıfı öntanımlı `0`. İleri-geri olasılıkları log uzayında toplanır (`log_add`). `MaskedSequenceCrossEntropyLoss` maskeli dil modeli içindir; pad veya yok sayılan konum maskeyle düşer. `next_sentence_prediction_loss` ikili karardır.
 
-### Nokta bulutu — `nexusloss::point_cloud`
+### ☁️ Nokta bulutu — `nexusloss::point_cloud`
 
 `ChamferDistanceLoss` iki bulutun birbirine en yakın nokta uzaklıklarını toplar. Noktalar düz bellekten okunur; öntanımlı boyut `3` (`[x, y, z, ...]`). `EarthMoverDistanceLoss` eşit sayıda nokta ister, Macar algoritmasıyla birebir eşler ve `O(n³)` çalışır. Büyük bulutta Chamfer öntanımlı seçimdir; EMD tam taşıma maliyeti istendiğinde ve kardinalite küçükken kullanılır.
 
-### Pekiştirmeli öğrenme — `nexusloss::reinforcement`
+### 🎮 Pekiştirmeli öğrenme — `nexusloss::reinforcement`
 
 | Sınıf | Anlamı |
 | --- | --- |
@@ -409,11 +425,11 @@ Serbest fonksiyonlar: `info_nce_loss`, `nt_xent_loss`, `byol_loss`, `dino_loss`,
 
 Ortam, avantaj tahmini ve klip istatistiği bu kütüphanede yoktur. Fonksiyonlar verilen log-olasılık, avantaj ve oran üzerinde kapanır.
 
-### Sağkalım — `nexusloss::survival`
+### ⏳ Sağkalım — `nexusloss::survival`
 
 `CoxPHLoss` Breslow risk kümesi kullanır. Olay göstergesi `bool`dur (`observed`). Sansürlü gözlem paya girmez, risk kümesinde kalır. `WeibullNLLLoss` log-ölçek ve log-şekil parametreleriyle Weibull negatif log olabilirlik hesaplar. Süre modeli ve sansür kodlaması çağıranın verisindedir.
 
-## Şekil ve kodlama kuralları
+## 🧩 Şekil ve kodlama kuralları
 
 Aşağıdaki kurallar testlerle aynı kabuldür. Bir kayıp yanlış kodlamada da sayı üretebilir; hata o zaman derlemede değil eğitimde görünür.
 
@@ -430,7 +446,7 @@ Aşağıdaki kurallar testlerle aynı kabuldür. Bir kayıp yanlış kodlamada d
 - Toplam değişim görüntüsü satır-major, kanal-sondadır.
 - `EntropyBonusLoss` olasılık dağılımı alır.
 
-## Test
+## ✅ Test
 
 Her aile için ayrı bir `tests/test_*.cpp` vardır. `test_smoke.cpp` başlıkların birlikte derlendiğini ve temel çağrıların sonlu kaldığını yoklar. Analitik gradyan, `expect_matches_finite_difference` ile merkezi farka bağlanır:
 
@@ -443,7 +459,7 @@ h = 1e-6 ,  tolerans = 1e-5
 
 GoogleTest keşfi `gtest_discover_tests` ile yapılır. `ctest` tek tek vaka listeler. Başarısız iddiada `--output-on-failure` iddia satırını basar.
 
-## Dokümantasyon sitesi
+## 🌐 Dokümantasyon sitesi
 
 Site `docs/website` içindedir ve Next.js uygulamasıdır. Kütüphane başlıklarından otomatik üretilmez; metin `docs/website/lib/docs/` altındaki katalog dosyalarındadır. Sayfalar:
 
@@ -461,7 +477,7 @@ npm run dev
 
 PDF ile sitenin rolü ayrıdır. Site gezinme ve örnek içindir. `docs/NexusLoss.pdf` tek başına okunan teknik referanstır; bu README ile aynı sözleşmeyi, mimariyi ve kataloğu taşır.
 
-## Sık karşılaşılan hatalar
+## 🛠️ Sık karşılaşılan hatalar
 
 **`backward()` istisna atıyor.** Aynı nesnede önce `forward` çağrılmamış. Ya sırayı düzeltin ya da `gradient(pred, target)` kullanın.
 
@@ -482,3 +498,7 @@ PDF ile sitenin rolü ayrıdır. Site gezinme ve örnek içindir. `docs/NexusLos
 **Boş vektör.** `check_same_size` boş girişi reddeder. Maske bütün elemanları atıyorsa çağrıdan önce o örneği düşürün; sıfır uzunluk göndermeyin.
 
 **`float` modeli `double` kaybına bağlamak.** Şablon tipi tahminin tipiyle aynı olmalıdır. Kütüphane ikisini karıştırıp dönüştürmez.
+
+## 📄 Lisans
+
+NexusLoss, [Apache License 2.0](LICENSE) altında dağıtılır. Lisansın izin verdiği koşullar, telif bildirimi ve lisans metninin korunması şartıyla yazılımı kullanabilir, değiştirebilir ve dağıtabilirsiniz.
