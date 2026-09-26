@@ -1,0 +1,407 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineSystem.cmake:211 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Windows - 10.0.26200 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      .NET Framework i├ğin MSBuild s├╝r├╝m 17.14.0-preview-25105-02+915bcd94d
+      Olu┼şturma ba┼şlat─▒ld─▒: 25.09.2026 23:01:04.
+      
+      1 d├╝─ş├╝m├╝nde "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\3.27.0\\CompilerIdCXX\\CompilerIdCXX.vcxproj" projesi (varsay─▒lan hedefler).
+      PrepareForBuild:
+        "Debug\\" dizini olu┼şturuluyor.
+        Yap─▒land─▒r─▒lm─▒┼ş ├ğ─▒k─▒┼ş etkinle┼ştirildi. Derleyici tan─▒lamas─▒n─▒n bi├ğimlendirmesi hata hiyerar┼şisini yans─▒t─▒r. Daha fazla ayr─▒nt─▒ i├ğin bkz. https://aka.ms/cpp/structured-output.
+        "Debug\\CompilerIdCXX.tlog\\" dizini olu┼şturuluyor.
+      InitializeBuildStatus:
+        "AlwaysCreate" belirtildi─şi i├ğin "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+        "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+        CMakeCXXCompilerId.cpp
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCXX.lib" /MACHINE:X64 Debug\\CMakeCXXCompilerId.obj
+        CompilerIdCXX.vcxproj -> C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\3.27.0\\CompilerIdCXX\\CompilerIdCXX.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_CXX_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" dosyas─▒ siliniyor.
+        "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate" ├Â─şesine eri┼şiliyor.
+      "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\3.27.0\\CompilerIdCXX\\CompilerIdCXX.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler).
+      
+      Olu┼şturma ba┼şar─▒l─▒ oldu.
+          0 Uyar─▒
+          0 Hata
+      
+      Ge├ğen S├╝re 00:00:03.88
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+      
+      The CXX compiler identification is MSVC, found in:
+        C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/3.27.0/CompilerIdCXX/CompilerIdCXX.exe
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-fyxrpp"
+      binary: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-fyxrpp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-fyxrpp'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_73607.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        .NET Framework i├ğin MSBuild s├╝r├╝m 17.14.0-preview-25105-02+915bcd94d
+        Olu┼şturma ba┼şlat─▒ld─▒: 25.09.2026 23:01:12.
+        
+        1 d├╝─ş├╝m├╝nde "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-fyxrpp\\cmTC_73607.vcxproj" projesi (varsay─▒lan hedefler).
+        PrepareForBuild:
+          "cmTC_73607.dir\\Debug\\" dizini olu┼şturuluyor.
+          Yap─▒land─▒r─▒lm─▒┼ş ├ğ─▒k─▒┼ş etkinle┼ştirildi. Derleyici tan─▒lamas─▒n─▒n bi├ğimlendirmesi hata hiyerar┼şisini yans─▒t─▒r. Daha fazla ayr─▒nt─▒ i├ğin bkz. https://aka.ms/cpp/structured-output.
+          "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-fyxrpp\\Debug\\" dizini olu┼şturuluyor.
+          "cmTC_73607.dir\\Debug\\cmTC_73607.tlog\\" dizini olu┼şturuluyor.
+        InitializeBuildStatus:
+          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_73607.dir\\Debug\\cmTC_73607.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+          "cmTC_73607.dir\\Debug\\cmTC_73607.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_73607.dir\\Debug\\\\" /Fd"cmTC_73607.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.27\\Modules\\CMakeCXXCompilerABI.cpp"
+          x64 i├ğin Microsoft (R) C/C++ ─░yile┼ştirmeli Derleyicisi S├╝r├╝m 19.44.34823.2
+          Telif Hakk─▒ (C) Microsoft Corporation. T├╝m haklar─▒ sakl─▒d─▒r.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_73607.dir\\Debug\\\\" /Fd"cmTC_73607.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.27\\Modules\\CMakeCXXCompilerABI.cpp"
+          CMakeCXXCompilerABI.cpp
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-fyxrpp\\Debug\\cmTC_73607.exe" /INCREMENTAL /ILK:"cmTC_73607.dir\\Debug\\cmTC_73607.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-fyxrpp/Debug/cmTC_73607.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-fyxrpp/Debug/cmTC_73607.lib" /MACHINE:X64  /machine:x64 cmTC_73607.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_73607.vcxproj -> C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-fyxrpp\\Debug\\cmTC_73607.exe
+        FinalizeBuildStatus:
+          "cmTC_73607.dir\\Debug\\cmTC_73607.tlog\\unsuccessfulbuild" dosyas─▒ siliniyor.
+          "cmTC_73607.dir\\Debug\\cmTC_73607.tlog\\cmTC_73607.lastbuildstate" ├Â─şesine eri┼şiliyor.
+        "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-fyxrpp\\cmTC_73607.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler).
+        
+        Olu┼şturma ba┼şar─▒l─▒ oldu.
+            0 Uyar─▒
+            0 Hata
+        
+        Ge├ğen S├╝re 00:00:01.84
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "build/_deps/googletest-src/CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      .NET Framework i├ğin MSBuild s├╝r├╝m 17.14.0-preview-25105-02+915bcd94d
+      Olu┼şturma ba┼şlat─▒ld─▒: 25.09.2026 23:01:46.
+      
+      1 d├╝─ş├╝m├╝nde "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\3.27.0\\CompilerIdC\\CompilerIdC.vcxproj" projesi (varsay─▒lan hedefler).
+      PrepareForBuild:
+        "Debug\\" dizini olu┼şturuluyor.
+        Yap─▒land─▒r─▒lm─▒┼ş ├ğ─▒k─▒┼ş etkinle┼ştirildi. Derleyici tan─▒lamas─▒n─▒n bi├ğimlendirmesi hata hiyerar┼şisini yans─▒t─▒r. Daha fazla ayr─▒nt─▒ i├ğin bkz. https://aka.ms/cpp/structured-output.
+        "Debug\\CompilerIdC.tlog\\" dizini olu┼şturuluyor.
+      InitializeBuildStatus:
+        "AlwaysCreate" belirtildi─şi i├ğin "Debug\\CompilerIdC.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+        "Debug\\CompilerIdC.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TC /FC /errorReport:queue CMakeCCompilerId.c
+        CMakeCCompilerId.c
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdC.lib" /MACHINE:X64 Debug\\CMakeCCompilerId.obj
+        CompilerIdC.vcxproj -> C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\3.27.0\\CompilerIdC\\CompilerIdC.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_C_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        "Debug\\CompilerIdC.tlog\\unsuccessfulbuild" dosyas─▒ siliniyor.
+        "Debug\\CompilerIdC.tlog\\CompilerIdC.lastbuildstate" ├Â─şesine eri┼şiliyor.
+      "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\3.27.0\\CompilerIdC\\CompilerIdC.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler).
+      
+      Olu┼şturma ba┼şar─▒l─▒ oldu.
+          0 Uyar─▒
+          0 Hata
+      
+      Ge├ğen S├╝re 00:00:06.92
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+      
+      The C compiler identification is MSVC, found in:
+        C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/3.27.0/CompilerIdC/CompilerIdC.exe
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "build/_deps/googletest-src/CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zah8ns"
+      binary: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zah8ns"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zah8ns'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_140a4.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        .NET Framework i├ğin MSBuild s├╝r├╝m 17.14.0-preview-25105-02+915bcd94d
+        Olu┼şturma ba┼şlat─▒ld─▒: 25.09.2026 23:01:56.
+        
+        1 d├╝─ş├╝m├╝nde "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zah8ns\\cmTC_140a4.vcxproj" projesi (varsay─▒lan hedefler).
+        PrepareForBuild:
+          "cmTC_140a4.dir\\Debug\\" dizini olu┼şturuluyor.
+          Yap─▒land─▒r─▒lm─▒┼ş ├ğ─▒k─▒┼ş etkinle┼ştirildi. Derleyici tan─▒lamas─▒n─▒n bi├ğimlendirmesi hata hiyerar┼şisini yans─▒t─▒r. Daha fazla ayr─▒nt─▒ i├ğin bkz. https://aka.ms/cpp/structured-output.
+          "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zah8ns\\Debug\\" dizini olu┼şturuluyor.
+          "cmTC_140a4.dir\\Debug\\cmTC_140a4.tlog\\" dizini olu┼şturuluyor.
+        InitializeBuildStatus:
+          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_140a4.dir\\Debug\\cmTC_140a4.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+          "cmTC_140a4.dir\\Debug\\cmTC_140a4.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_140a4.dir\\Debug\\\\" /Fd"cmTC_140a4.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.27\\Modules\\CMakeCCompilerABI.c"
+          x64 i├ğin Microsoft (R) C/C++ ─░yile┼ştirmeli Derleyicisi S├╝r├╝m 19.44.34823.2
+          Telif Hakk─▒ (C) Microsoft Corporation. T├╝m haklar─▒ sakl─▒d─▒r.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_140a4.dir\\Debug\\\\" /Fd"cmTC_140a4.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.27\\Modules\\CMakeCCompilerABI.c"
+          CMakeCCompilerABI.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zah8ns\\Debug\\cmTC_140a4.exe" /INCREMENTAL /ILK:"cmTC_140a4.dir\\Debug\\cmTC_140a4.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zah8ns/Debug/cmTC_140a4.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zah8ns/Debug/cmTC_140a4.lib" /MACHINE:X64  /machine:x64 cmTC_140a4.dir\\Debug\\CMakeCCompilerABI.obj
+          cmTC_140a4.vcxproj -> C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zah8ns\\Debug\\cmTC_140a4.exe
+        FinalizeBuildStatus:
+          "cmTC_140a4.dir\\Debug\\cmTC_140a4.tlog\\unsuccessfulbuild" dosyas─▒ siliniyor.
+          "cmTC_140a4.dir\\Debug\\cmTC_140a4.tlog\\cmTC_140a4.lastbuildstate" ├Â─şesine eri┼şiliyor.
+        "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zah8ns\\cmTC_140a4.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler).
+        
+        Olu┼şturma ba┼şar─▒l─▒ oldu.
+            0 Uyar─▒
+            0 Hata
+        
+        Ge├ğen S├╝re 00:00:04.61
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "build/_deps/googletest-src/googletest/cmake/internal_utils.cmake:66 (find_package)"
+      - "build/_deps/googletest-src/googletest/CMakeLists.txt:83 (config_compiler_and_linker)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-qxv5yr"
+      binary: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-qxv5yr"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-qxv5yr'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_56d8a.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        .NET Framework i├ğin MSBuild s├╝r├╝m 17.14.0-preview-25105-02+915bcd94d
+        Olu┼şturma ba┼şlat─▒ld─▒: 25.09.2026 23:02:27.
+        
+        1 d├╝─ş├╝m├╝nde "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\cmTC_56d8a.vcxproj" projesi (varsay─▒lan hedefler).
+        PrepareForBuild:
+          "cmTC_56d8a.dir\\Debug\\" dizini olu┼şturuluyor.
+          Yap─▒land─▒r─▒lm─▒┼ş ├ğ─▒k─▒┼ş etkinle┼ştirildi. Derleyici tan─▒lamas─▒n─▒n bi├ğimlendirmesi hata hiyerar┼şisini yans─▒t─▒r. Daha fazla ayr─▒nt─▒ i├ğin bkz. https://aka.ms/cpp/structured-output.
+          "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\Debug\\" dizini olu┼şturuluyor.
+          "cmTC_56d8a.dir\\Debug\\cmTC_56d8a.tlog\\" dizini olu┼şturuluyor.
+        InitializeBuildStatus:
+          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_56d8a.dir\\Debug\\cmTC_56d8a.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+          "cmTC_56d8a.dir\\Debug\\cmTC_56d8a.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CMAKE_HAVE_LIBC_PTHREAD /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_56d8a.dir\\Debug\\\\" /Fd"cmTC_56d8a.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\src.c"
+          x64 i├ğin Microsoft (R) C/C++ ─░yile┼ştirmeli Derleyicisi S├╝r├╝m 19.44.34823.2
+          Telif Hakk─▒ (C) Microsoft Corporation. T├╝m haklar─▒ sakl─▒d─▒r.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CMAKE_HAVE_LIBC_PTHREAD /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_56d8a.dir\\Debug\\\\" /Fd"cmTC_56d8a.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\src.c"
+          src.c
+        C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\src.c(1,10): error C1083: i├ğerme dosyas─▒ a├ğ─▒lam─▒yor: 'pthread.h': No such file or directory [C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\cmTC_56d8a.vcxproj]
+        "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\cmTC_56d8a.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler) -- BA┼ŞARISIZ OLDU.
+        
+        Olu┼şturma BA┼ŞARISIZ OLDU.
+        
+        "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\cmTC_56d8a.vcxproj" (varsay─▒lan hedef) (1) ->
+        (ClCompile hedefi) -> 
+          C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\src.c(1,10): error C1083: i├ğerme dosyas─▒ a├ğ─▒lam─▒yor: 'pthread.h': No such file or directory [C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qxv5yr\\cmTC_56d8a.vcxproj]
+        
+            0 Uyar─▒
+            1 Hata
+        
+        Ge├ğen S├╝re 00:00:02.67
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CheckLibraryExists.cmake:69 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/FindThreads.cmake:112 (CHECK_LIBRARY_EXISTS)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/FindThreads.cmake:175 (_threads_check_lib)"
+      - "build/_deps/googletest-src/googletest/cmake/internal_utils.cmake:66 (find_package)"
+      - "build/_deps/googletest-src/googletest/CMakeLists.txt:83 (config_compiler_and_linker)"
+    checks:
+      - "Looking for pthread_create in pthreads"
+    directories:
+      source: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zmyvzc"
+      binary: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zmyvzc"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREADS_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zmyvzc'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_30375.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        .NET Framework i├ğin MSBuild s├╝r├╝m 17.14.0-preview-25105-02+915bcd94d
+        Olu┼şturma ba┼şlat─▒ld─▒: 25.09.2026 23:02:30.
+        
+        1 d├╝─ş├╝m├╝nde "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\cmTC_30375.vcxproj" projesi (varsay─▒lan hedefler).
+        PrepareForBuild:
+          "cmTC_30375.dir\\Debug\\" dizini olu┼şturuluyor.
+          Yap─▒land─▒r─▒lm─▒┼ş ├ğ─▒k─▒┼ş etkinle┼ştirildi. Derleyici tan─▒lamas─▒n─▒n bi├ğimlendirmesi hata hiyerar┼şisini yans─▒t─▒r. Daha fazla ayr─▒nt─▒ i├ğin bkz. https://aka.ms/cpp/structured-output.
+          "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\Debug\\" dizini olu┼şturuluyor.
+          "cmTC_30375.dir\\Debug\\cmTC_30375.tlog\\" dizini olu┼şturuluyor.
+        InitializeBuildStatus:
+          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_30375.dir\\Debug\\cmTC_30375.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+          "cmTC_30375.dir\\Debug\\cmTC_30375.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_30375.dir\\Debug\\\\" /Fd"cmTC_30375.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\CheckFunctionExists.c"
+          x64 i├ğin Microsoft (R) C/C++ ─░yile┼ştirmeli Derleyicisi S├╝r├╝m 19.44.34823.2
+          Telif Hakk─▒ (C) Microsoft Corporation. T├╝m haklar─▒ sakl─▒d─▒r.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_30375.dir\\Debug\\\\" /Fd"cmTC_30375.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\Debug\\cmTC_30375.exe" /INCREMENTAL /ILK:"cmTC_30375.dir\\Debug\\cmTC_30375.ilk" /NOLOGO pthreads.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zmyvzc/Debug/cmTC_30375.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-zmyvzc/Debug/cmTC_30375.lib" /MACHINE:X64  /machine:x64 cmTC_30375.dir\\Debug\\CheckFunctionExists.obj
+        LINK : fatal error LNK1104: 'pthreads.lib' dosyas─▒ a├ğ─▒lam─▒yor [C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\cmTC_30375.vcxproj]
+        "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\cmTC_30375.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler) -- BA┼ŞARISIZ OLDU.
+        
+        Olu┼şturma BA┼ŞARISIZ OLDU.
+        
+        "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\cmTC_30375.vcxproj" (varsay─▒lan hedef) (1) ->
+        (Link hedefi) -> 
+          LINK : fatal error LNK1104: 'pthreads.lib' dosyas─▒ a├ğ─▒lam─▒yor [C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-zmyvzc\\cmTC_30375.vcxproj]
+        
+            0 Uyar─▒
+            1 Hata
+        
+        Ge├ğen S├╝re 00:00:00.98
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/CheckLibraryExists.cmake:69 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/FindThreads.cmake:112 (CHECK_LIBRARY_EXISTS)"
+      - "C:/Program Files/CMake/share/cmake-3.27/Modules/FindThreads.cmake:176 (_threads_check_lib)"
+      - "build/_deps/googletest-src/googletest/cmake/internal_utils.cmake:66 (find_package)"
+      - "build/_deps/googletest-src/googletest/CMakeLists.txt:83 (config_compiler_and_linker)"
+    checks:
+      - "Looking for pthread_create in pthread"
+    directories:
+      source: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-9ys426"
+      binary: "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-9ys426"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREAD_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-9ys426'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Preview/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_1aba9.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        .NET Framework i├ğin MSBuild s├╝r├╝m 17.14.0-preview-25105-02+915bcd94d
+        Olu┼şturma ba┼şlat─▒ld─▒: 25.09.2026 23:02:32.
+        
+        1 d├╝─ş├╝m├╝nde "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\cmTC_1aba9.vcxproj" projesi (varsay─▒lan hedefler).
+        PrepareForBuild:
+          "cmTC_1aba9.dir\\Debug\\" dizini olu┼şturuluyor.
+          Yap─▒land─▒r─▒lm─▒┼ş ├ğ─▒k─▒┼ş etkinle┼ştirildi. Derleyici tan─▒lamas─▒n─▒n bi├ğimlendirmesi hata hiyerar┼şisini yans─▒t─▒r. Daha fazla ayr─▒nt─▒ i├ğin bkz. https://aka.ms/cpp/structured-output.
+          "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\Debug\\" dizini olu┼şturuluyor.
+          "cmTC_1aba9.dir\\Debug\\cmTC_1aba9.tlog\\" dizini olu┼şturuluyor.
+        InitializeBuildStatus:
+          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_1aba9.dir\\Debug\\cmTC_1aba9.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+          "cmTC_1aba9.dir\\Debug\\cmTC_1aba9.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_1aba9.dir\\Debug\\\\" /Fd"cmTC_1aba9.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\CheckFunctionExists.c"
+          x64 i├ğin Microsoft (R) C/C++ ─░yile┼ştirmeli Derleyicisi S├╝r├╝m 19.44.34823.2
+          Telif Hakk─▒ (C) Microsoft Corporation. T├╝m haklar─▒ sakl─▒d─▒r.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_1aba9.dir\\Debug\\\\" /Fd"cmTC_1aba9.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.34823\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\Debug\\cmTC_1aba9.exe" /INCREMENTAL /ILK:"cmTC_1aba9.dir\\Debug\\cmTC_1aba9.ilk" /NOLOGO pthread.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-9ys426/Debug/cmTC_1aba9.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/CMakeFiles/CMakeScratch/TryCompile-9ys426/Debug/cmTC_1aba9.lib" /MACHINE:X64  /machine:x64 cmTC_1aba9.dir\\Debug\\CheckFunctionExists.obj
+        LINK : fatal error LNK1104: 'pthread.lib' dosyas─▒ a├ğ─▒lam─▒yor [C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\cmTC_1aba9.vcxproj]
+        "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\cmTC_1aba9.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler) -- BA┼ŞARISIZ OLDU.
+        
+        Olu┼şturma BA┼ŞARISIZ OLDU.
+        
+        "C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\cmTC_1aba9.vcxproj" (varsay─▒lan hedef) (1) ->
+        (Link hedefi) -> 
+          LINK : fatal error LNK1104: 'pthread.lib' dosyas─▒ a├ğ─▒lam─▒yor [C:\\Users\\muham\\Desktop\\Nexus\\lib\\NexusLoss\\build\\CMakeFiles\\CMakeScratch\\TryCompile-9ys426\\cmTC_1aba9.vcxproj]
+        
+            0 Uyar─▒
+            1 Hata
+        
+        Ge├ğen S├╝re 00:00:00.94
+        
+      exitCode: 1
+...

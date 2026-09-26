@@ -1,0 +1,26 @@
+=== AMAÇ ===
+Bu klasör, her loss kategorisinin hem değerinin hem gradyanının doğru olduğunu
+otomatik sınar. GoogleTest kullanılır; yeni bir test çerçevesine geçilmez.
+
+=== İÇERİK ===
+- grad_check.hpp: merkezi sonlu fark ile analitik türevi karşılaştırır.
+- test_smoke.cpp: kütüphanenin temel senaryoları (softmax, IoU, CTC, PPO).
+- test_classification.cpp: BCE-with-logits kapalı formu (logit 0, hedef 1 -> log 2,
+  gradyan -0.5), softmax cross-entropy (p - one_hot).
+- test_regression.cpp: MSE kapalı formu 2(x-y)/N ve Mean*N = Sum ilişkisi.
+- test_segmentation.cpp, test_detection.cpp, test_distillation.cpp,
+  test_generative.cpp, test_metric.cpp, test_point_cloud.cpp, test_ranking.cpp,
+  test_reinforcement.cpp, test_self_supervised.cpp, test_sequence.cpp,
+  test_survival.cpp: aynı girdinin sonlu farkına karşı analitik gradyan,
+  tam örtüşmede sıfır kayıp ve boş/ayrık girdide sonlu sonuç.
+
+=== NE ZAMAN KULLANILIR ===
+Bir formül veya türevi değişince `nexusloss_tests` çalıştırılır. CTC, kutu IoU
+ailesi ve kontrastif kayıplar referans sayı yerine merkezi farkla kilitlenmiştir;
+sınıflandırma ve regresyonda ek olarak elle bilinen PyTorch ile aynı kapalı
+formlar vardır (BCE-with-logits, MSE mean gradyanı 2(x-y)/N, CE = log_sum_exp - z_c).
+
+=== BAĞIMLILIKLAR ===
+- GoogleTest (FetchContent, v1.14.0)
+- nexusloss başlıkları
+- CMake hedefi nexusloss_tests

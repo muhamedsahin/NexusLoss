@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\e48e4ab73c995c7fc4ebe14a40df5ced\googletest-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\e48e4ab73c995c7fc4ebe14a40df5ced\googletest-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\e48e4ab73c995c7fc4ebe14a40df5ced\googletest-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\e48e4ab73c995c7fc4ebe14a40df5ced\googletest-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\e48e4ab73c995c7fc4ebe14a40df5ced\googletest-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\e48e4ab73c995c7fc4ebe14a40df5ced\googletest-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\e48e4ab73c995c7fc4ebe14a40df5ced\googletest-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\e48e4ab73c995c7fc4ebe14a40df5ced\googletest-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\1e9fd390a8cda1b8d2e085a84b47a88c\googletest-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\4e683ece3c54a4e44e8c5fb5d9ccec60\googletest-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\_deps\googletest-subbuild\CMakeFiles\googletest-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{61207B4D-C16C-3112-84C1-24E664D2DC77}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

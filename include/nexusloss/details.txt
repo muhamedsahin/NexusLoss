@@ -1,0 +1,19 @@
+=== AMAÇ ===
+Bu klasör, NexusLoss'un tek include noktasıdır. Kullanıcı
+`#include <nexusloss/nexusloss.hpp>` yazınca çekirdek yardımcılar ve 13 loss
+kategorisi birlikte gelir.
+
+=== İÇERİK ===
+- nexusloss.hpp: core ve losses altındaki başlıkları tek kapıdan açar. Kendi hesabı yoktur.
+- core/: reduction, sayısal kararlılık ve (kayıpların ortak sözleşmesi losses/'te durur).
+- losses/: somut loss fonksiyonları, forward değer ve analitik dL/d(prediction).
+
+=== NE ZAMAN KULLANILIR ===
+NexusTrain bir adımda prediction ile target'ı buradan bir loss'a verir.
+Dönen skaler NexusTrain'in log'una, gradyan NexusOptim'e gider. Ağırlık
+güncellemesi ve veri yükleme bu klasörde yapılmaz.
+
+=== BAĞIMLILIKLAR ===
+- C++20 standart kütüphanesi (span, vector)
+- nexusloss/core ve nexusloss/losses
+- MatrixFlash Pro'ya derleme bağımlılığı yoktur; gerekçe core/details.txt içindedir.

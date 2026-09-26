@@ -1,0 +1,14 @@
+=== AMAÇ ===
+Kütüphaneyi açıp üç satırda loss ve gradyan üretmenin çalışan örneği burada durur.
+
+=== İÇERİK ===
+- main.cpp: Huber loss forward/backward, logit üzerinde BCE ve üç sınıflı
+  cross-entropy. Çıktı skaler kayıp ve her tahmin elemanının gradyanıdır.
+
+=== NE ZAMAN KULLANILIR ===
+API'nin forward sonra backward sırasını ve "ham logit / olasılık" ayrımını
+görmek için derlenir. CMake hedefi basic_example.
+
+=== BAĞIMLILIKLAR ===
+- nexusloss/nexusloss.hpp
+- C++20

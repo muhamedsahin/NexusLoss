@@ -1,0 +1,5 @@
+if(EXISTS "C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/nexusloss_tests[1]_tests.cmake")
+  include("C:/Users/muham/Desktop/Nexus/lib/NexusLoss/build/nexusloss_tests[1]_tests.cmake")
+else()
+  add_test(nexusloss_tests_NOT_BUILT nexusloss_tests_NOT_BUILT)
+endif()

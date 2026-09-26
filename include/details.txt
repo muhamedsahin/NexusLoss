@@ -1,0 +1,90 @@
+Kanka tamam, dosya dosya, günlük dille anlatıyorum. Önce bir benzetme: kütüphaneyi bir alet çantası gibi düşün. Her dosya çantanın bir bölmesi ya da bir aleti.
+
+## Ana klasör
+
+**`CMakeLists.txt`**
+Bilgisayara "bu projeyi nasıl derleyeceksin" diyen tarif dosyası. C++ kodunu yazınca çalışması için derlemen gerekir. Bu dosyada projenin adı, hangi C++ sürümünü kullandığın, hangi klasörlerde kod olduğu ve testlerin nasıl çalıştırılacağı yazar. Bunu yazmazsan kendi projeni bile tek tek elle derlemen gerekir. Başkası kütüphaneni kullanmak isterse de bu dosya sayesinde kolayca ekler.
+
+**`README.md`**
+Projenin vitrini. Biri GitHub'da projeni açtığında ilk bunu görür. İçinde şunlar olur: NexusLoss nedir, nasıl kurulur, 5 satırlık basit bir kullanım örneği, hangi loss'lar var. İnsanlar kütüphanenin iyi olup olmadığına çoğu zaman buna bakıp karar verir, o yüzden en son ama özenli yazılmalı.
+
+## `include/nexusloss/` klasörü (kütüphanenin asıl kodu)
+
+**`nexusloss.hpp`**
+Kapı görevi gören dosya. Kullanıcı tek satırla:
+```cpp
+#include <nexusloss/nexusloss.hpp>
+```
+yazınca bütün loss'lar ve yardımcılar gelsin diye var. İçinde kendi işi yok, sadece diğer dosyaları çağırır. Bu olmasa kullanıcı her loss dosyasını tek tek eklemek zorunda kalırdı.
+
+### `core/` klasörü (herkesin ortak kullandığı yardımcılar)
+
+**`reduction.hpp`**
+Loss hesaplarken önce her örnek için ayrı hata bulunur, mesela 100 örnek varsa 100 tane hata değeri. Sonra bunları tek sayıya indirmek gerekir. İşte bu dosya o "indirme" işini yapar ve üç seçenek sunar:
+- **mean:** hepsinin ortalamasını al
+- **sum:** hepsini topla
+- **none:** hiçbir şey yapma, 100 değeri olduğu gibi ver
+
+Bu işi her loss'un içinde tekrar tekrar yazmak yerine bir kere burada yazarız. Bir hata çıkarsa da tek yerde düzeltirsin.
+
+**`utils.hpp`**
+Yardımcı işlerin çekmecesi. İçindeki şeyler:
+- **Epsilon:** `1e-7` gibi çok küçük bir sayı. Bilgisayar sıfıra bölemez ya da sıfırın logaritmasını alamaz, program bozulur. Bu küçük sayıyı ekleyerek bunu önleriz.
+- **Boyut kontrolü:** Tahmin listesi 10 elemanlı, gerçek değerler 8 elemanlıysa hesap saçmalar. Bu kontrol, sessizce yanlış sonuç vermek yerine hata verip "boyutlar uyuşmuyor" der.
+- **Güvenli log ve sigmoid:** Bazı matematik işlemleri uç değerlerde patlar. Bunların patlamayan, korumalı versiyonlarını burada yazarız.
+
+### `losses/` klasörü (asıl loss'lar)
+
+**`loss_base.hpp`**
+Bütün loss'ların uyacağı ortak kural kitabı. Her loss'un iki iş yapabilmesi gerekir:
+1. **forward:** Modelin ne kadar yanlış yaptığını tek bir sayıyla söyle.
+2. **backward:** Modelin hangi yöne düzelmesi gerektiğini söyle (buna gradient denir).
+
+C++'ta bunu bilgisayar bizim yerimize yapmaz, kendimiz yazmak zorundayız. Bu dosya "her loss bu iki fonksiyonu içermek zorunda" diye kural koyar. Böylece kütüphaneni kullanan kişi hangi loss'u seçerse seçsin aynı şekilde kullanır.
+
+**`regression.hpp`**
+Sayı tahmin eden modeller için loss'lar. Örneğin ev fiyatını ya da sıcaklığı tahmin eden bir model. İçinde:
+- **MSE:** Tahmin ile gerçek arasındaki farkın karesini alır. Büyük hataları çok sert cezalandırır.
+- **Huber:** MSE'nin yumuşatılmış hali. Küçük hatalarda MSE gibi, büyük hatalarda daha sakin davranır. Bu yüzden uç değerlerden (aykırı verilerden) fazla etkilenmez.
+not:modelin her çıktısının hatalarını bir diziye dönüştürerek her çıktının hata değerine bakarak ya ortalamasını alarak veya
+en ufak cezasında yüksek bir ağırlık ile cezalandırarak genel bir loss değeri veriyoruz.
+
+
+**`classification.hpp`**
+"Bu bir kedi mi köpek mi?" gibi kategori seçen modeller için loss'lar. İçinde:
+- **CrossEntropy:** En klasik sınıflandırma loss'u. Model doğru sınıfa ne kadar az güvenirse o kadar çok ceza verir.
+- **Focal Loss:** CrossEntropy'nin gelişmiş hali. Modelin zaten kolay bildiği örnekleri az önemser, zorlandığı örneklere odaklanır. Verinin çoğu bir sınıftan oluşuyorsa (mesela 1000 sağlıklı, 10 hasta) çok işe yarar.
+
+**`segmentation.hpp`**
+Görüntüdeki nesnenin sınırını piksel piksel bulmaya çalışan modeller için loss'lar. Örneğin bir röntgende tümörün yerini işaretlemek. İçinde:
+- **Dice Loss:** Modelin işaretlediği alan ile gerçek alanın ne kadar örtüştüğüne bakar. Örtüşme ne kadar azsa ceza o kadar büyük.
+
+Sonradan Tversky gibi diğer loss'ları da aynı düzenle buraya ya da ilgili dosyaya ekleriz.
+
+## Klasörler
+
+**`tests/`**
+Kodun doğru çalıştığını kontrol eden otomatik sınav kâğıtları. Her loss için şöyle testler yazılır: "Elle hesapladığım sonuçla aynı mı?", "Türev (backward) doğru mu?", "Hep 0 ya da hep 1 verirsem bozuluyor mu?". Loss'ta bir hata sessizce kalırsa kullanıcı modelini boşuna eğitir. Bu yüzden bu klasör kütüphanenin en önemli parçalarından biri. Bir şeyi değiştirdiğinde her şeyin hâlâ çalıştığını tek komutla görürsün.
+
+**`examples/`**
+Kullanıcıya "bunu şöyle kullanırsın" diye gösteren küçük çalışan programlar. Mesela 20 satırlık `main.cpp`: iki liste tanımla, Huber loss hesapla, sonucu ekrana yaz. İnsanlar dokümantasyon okumaktan çok örnek koda bakıp kopyalar, bu yüzden değerli.
+
+## Gradyan
+
+Her loss sadece "ne kadar yanlış" demez, tahminin hangi yöne düzelmesi gerektiğini de söyler (`backward` / `gradient`). Bu türev elle yazılır. MatrixFlash Pro'nun kendi autograd'ı vardır ama bu kütüphane ona bağlanmaz: girdi `std::span`, çıktı düz vektördür. Ağırlığı oynatmak yine NexusOptim'in işidir.
+
+## Hepsi birlikte nasıl çalışıyor?
+
+Kullanıcı `nexusloss.hpp`'yi ekler. Loss'lardan birini seçer, mesela Focal Loss. O da `loss_base.hpp`'deki kurallara uyar, `utils.hpp`'den korumalı matematik fonksiyonlarını alır ve `reduction.hpp` ile sonucu tek sayıya indirir. `tests/` bunların hepsinin doğru çalıştığını kontrol eder, `CMakeLists.txt` her şeyi derler, `README.md` de kullanıcıya nereden başlayacağını söyler.
+
+## Yazma sırası
+
+1. `CMakeLists.txt` (iskelet çalışsın)
+2. `utils.hpp` ve `reduction.hpp`
+3. `loss_base.hpp`
+4. `regression.hpp` + testi
+5. `classification.hpp` + testi
+6. `segmentation.hpp` + testi
+7. `nexusloss.hpp`, `examples/` ve `README.md`
+
+İstersen sıradan başlayıp `CMakeLists.txt` ve `utils.hpp`'yi birlikte yazalım.

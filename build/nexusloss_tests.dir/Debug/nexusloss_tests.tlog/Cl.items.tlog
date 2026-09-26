@@ -1,0 +1,14 @@
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_smoke.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_smoke.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_classification.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_classification.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_regression.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_regression.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_segmentation.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_segmentation.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_detection.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_detection.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_distillation.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_distillation.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_generative.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_generative.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_metric.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_metric.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_point_cloud.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_point_cloud.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_ranking.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_ranking.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_reinforcement.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_reinforcement.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_self_supervised.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_self_supervised.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_sequence.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_sequence.obj
+C:\Users\muham\Desktop\Nexus\lib\NexusLoss\tests\test_survival.cpp;C:\Users\muham\Desktop\Nexus\lib\NexusLoss\build\nexusloss_tests.dir\Debug\test_survival.obj

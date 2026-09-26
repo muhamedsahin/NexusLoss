@@ -1,0 +1,25 @@
+=== AMAÇ ===
+Bu klasör, her loss'un tekrar yazmak zorunda kaldığı sayısal altyapıyı tutar:
+reduction, güvenli log/sigmoid ve log-sum-exp. Loss sınıflarının ortak atası
+burada değil, losses/loss_base.hpp içindedir. Oradaki relative include'lar ve
+"bu sınıf bir loss sözleşmesidir" kararı bozulmasın diye taşınmadı.
+
+=== İÇERİK ===
+- utils.hpp: epsilon, clamp, safe_log, stable_sigmoid, clamp_probability,
+  log_sum_exp, softmax, one_hot, apply_mask, safe_divide.
+- reduction.hpp: Mean, Sum, None ve BatchMean. Düz vektörde BatchMean, Mean ile
+  aynıdır; satır-bazlı KL'de isim, batch boyutuna bölme niyetini belgeler.
+
+=== NE ZAMAN KULLANILIR ===
+Yeni bir loss yazarken log(0), taşan softmax veya batch özetini burada hazır
+bulursun. Eleman bazlı hata kendi dosyanda kalır.
+
+=== BAĞIMLILIKLAR ===
+- C++20: cmath, span, vector, algorithm
+- MatrixFlash Pro autograd kararı: matrix_pro::Variable ve VarTensor hesap
+  grafiği sunar. NexusLoss buna bağlanmaz. Kütüphane header-only kalır ve
+  mevcut std::span sözleşmesini bozmaz. Her loss, dL/d(prediction) türevini
+  elle verir; bu, füzyonlu loss çekirdeklerinde autograd'dan hızlı olan yoldur.
+  İsteyen üst katman, bu skaler + gradyanı matrix_pro::custom_loss içine koyabilir.
+  Tensor tipi float'tır ve GPU aynası taşır; buradaki şablon float ve double
+  ile CPU'da çalışır.

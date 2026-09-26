@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>NexusLoss — Teknik Referans</title>
+<style>
+  :root {
+    --ink: #1c2118;
+    --muted: #5c6556;
+    --line: #d9d6cc;
+    --paper: #fbfaf6;
+    --acid: #c6f135;
+    --pine: #1e3a24;
+    --chip: #eef3e4;
+    --code: #f3f1ea;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: white;
+    color: var(--ink);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    size: A4;
+    margin: 16mm 15mm 18mm 15mm;
+  }
+  @page :first { margin: 0; }
+  h1, h2, h3, h4 { font-weight: 650; letter-spacing: -0.02em; color: var(--pine); }
+  h2 {
+    font-size: 16pt;
+    margin: 0 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 2.5px solid var(--acid);
+  }
+  h3 { font-size: 12pt; margin: 16px 0 6px; }
+  h4 { font-size: 10.5pt; margin: 12px 0 4px; }
+  p { margin: 0 0 8px; }
+  a { color: inherit; text-decoration: none; }
+  code, pre, .mono { font-family: Consolas, "Cascadia Mono", "Courier New", monospace; }
+  code {
+    font-size: 9pt;
+    background: var(--code);
+    padding: 0 3px;
+    border-radius: 3px;
+  }
+  pre {
+    background: var(--code);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--pine);
+    padding: 8px 10px;
+    font-size: 8.4pt;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    margin: 8px 0 12px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px;
+    font-size: 9pt;
+  }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    background: var(--pine);
+    color: #f4f7ef;
+    font-weight: 600;
+    border-bottom: none;
+  }
+  tr:nth-child(even) td { background: #f6f5f0; }
+  .cover {
+    height: 297mm;
+    background: #101410;
+    color: #f3f6ee;
+    padding: 22mm 18mm 16mm;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 8mm;
+    background: var(--acid);
+  }
+  .kicker {
+    font-size: 9pt;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--acid);
+    margin: 0 0 18mm;
+  }
+  .cover h1 {
+    color: white;
+    font-size: 42pt;
+    line-height: 0.95;
+    margin: 0 0 8px;
+    letter-spacing: -0.04em;
+  }
+  .subtitle {
+    font-size: 16pt;
+    color: #d7e0cc;
+    margin: 0 0 10mm;
+  }
+  .author {
+    border-top: 1px solid #314033;
+    padding-top: 6mm;
+    max-width: 150mm;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+  .author strong { color: white; }
+  .abstract {
+    margin-top: 10mm;
+    max-width: 155mm;
+    color: #c9d3c2;
+    font-size: 11pt;
+  }
+  .cover-meta {
+    margin-top: auto;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .pill {
+    border: 1px solid #3d4d3c;
+    color: var(--acid);
+    padding: 4px 9px;
+    border-radius: 99px;
+    font-size: 8.5pt;
+    letter-spacing: 0.04em;
+  }
+  .section { break-before: page; }
+  .lead { font-size: 11.5pt; color: #243026; }
+  .note {
+    background: var(--chip);
+    border-left: 3px solid var(--pine);
+    padding: 8px 10px;
+    margin: 8px 0 12px;
+  }
+  ul, ol { margin: 4px 0 10px; padding-left: 18px; }
+  li { margin: 2px 0; }
+  .toc a { display: block; padding: 3px 0; border-bottom: 1px dotted var(--line); }
+  .toc span { float: right; color: var(--muted); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card {
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    background: white;
+  }
+  .card h3 { margin-top: 0; }
+  .small { color: var(--muted); font-size: 9pt; }
+  .tree { font-size: 8pt; }
+  footer.colophon {
+    margin-top: 18px;
+    border-top: 2px solid var(--acid);
+    padding-top: 8px;
+    color: var(--muted);
+    font-size: 9pt;
+  }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <p class="kicker">Bursa Teknik Üniversitesi · Bilgisayar Mühendisliği</p>
+  <h1>NexusLoss</h1>
+  <p class="subtitle">Teknik referans · sürüm 0.1.0</p>
+  <div class="author">
+    Bu proje, Bursa Teknik Üniversitesi Bilgisayar Mühendisliği 1. sınıf öğrencisi
+    <strong>Muhammed Fatih Şahin</strong> tarafından geliştirilmiştir.
+  </div>
+  <p class="abstract">
+    NexusLoss, eğitim adımında tahmin ile hedef arasındaki hatayı ve bu hatanın
+    tahmine göre türevini üretir. C++20, header-only, çalışma anında bağımlılıksız.
+    Hesap CPU üzerinde, <em>float</em> ve <em>double</em> şablonlarıyla, analitik
+    gradyanla yürür. On üç aile dokümantasyon sitesinde 88 kayıt olarak indekslenir.
+  </p>
+  <div class="cover-meta">
+    <span class="pill">C++20</span>
+    <span class="pill">header-only</span>
+    <span class="pill">std::span</span>
+    <span class="pill">analitik gradyan</span>
+    <span class="pill">CPU</span>
+    <span class="pill">13 aile</span>
+  </div>
+</section>
+
+<section class="section">
+  <h2>İçindekiler</h2>
+  <div class="toc">
+    <a href="#rol">1. Projenin rolü</a>
+    <a href="#icerik">2. İçinde ne var</a>
+    <a href="#mimari">3. Performans mimarisi</a>
+    <a href="#agac">4. Klasör ve dosya yapısı</a>
+    <a href="#kurulum">5. Kurulum ve hızlı başlangıç</a>
+    <a href="#sozlesme">6. Sözleşme</a>
+    <a href="#reduction">7. İndirgeme ve ağırlık</a>
+    <a href="#karar">8. Sayısal kararlılık</a>
+    <a href="#secim">9. Hangi kaybı seçmeli</a>
+    <a href="#katalog">10. Kayıp kataloğu</a>
+    <a href="#sekil">11. Şekil ve kodlama</a>
+    <a href="#test">12. Test ve dokümantasyon</a>
+  </div>
+  <div class="note">
+    Bu basım, depo kökündeki <code>README.md</code> ile aynı sözleşmeyi taşır.
+    Kaynak sayfa <code>docs/NexusLoss.html</code>dir. Gezinmeli anlatım
+    <code>docs/website</code> içindeki sitededir.
+  </div>
+</section>
+
+<section class="section" id="rol">
+  <h2>1. Projenin rolü</h2>
+  <p class="lead">Bir eğitim adımı dört parçaya ayrılır. Veri gelir, model bir tahmin üretir, kayıp o tahmini hedefle karşılaştırır, eniyileyici ağırlığı gradyan yönünde günceller. NexusLoss yalnızca üçüncü parçadır.</p>
+  <div class="cols">
+    <div class="card">
+      <h3>Çağıran verir</h3>
+      <ul>
+        <li>tahmin, <code>std::span&lt;const T&gt;</code></li>
+        <li>hedef, aynı uzunlukta span veya bir sınıf indeksi</li>
+        <li>isteğe bağlı örnek ağırlığı</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Kütüphane döndürür</h3>
+      <ul>
+        <li>skaler ya da eleman bazlı kayıp</li>
+        <li>tahminle aynı uzunlukta <code>dL / d(prediction)</code></li>
+      </ul>
+    </div>
+  </div>
+  <p>Dönen vektör bir autograd düğümü değildir. Çağıran bu vektörü modele geri yayar. Kütüphane ağırlık tensörünü görmez, öğrenme hızı uygulamaz, veri yüklemez.</p>
+  <h3>İki hesap şekli</h3>
+  <p><strong>Eleman bazlı kayıplar</strong> <code>LossBase&lt;T&gt;</code> üzerinden gelir. Regresyon, ikili çapraz entropi ve hinge ailesi bu gruptadır. <code>compute_element_wise</code> her konum için bir hata üretir, <code>core::apply_reduction</code> bunu özetler, <code>gradient</code> aynı özete uygun ölçeği uygular.</p>
+  <p><strong>Yapısal kayıplar</strong> <code>LossBase</code>tan türemez. Kutu, CTC, nokta bulutu, liste sıralaması ve tek örnekli çok sınıflı çapraz entropi kendi <code>forward</code> / <code>backward</code> imzasını kullanır. Şekil bilgisi (zaman, sınıf, kutu köşesi, nokta boyutu) düz vektörde kaybolmaz.</p>
+  <h3>Nexus içindeki yeri</h3>
+  <table>
+    <tr><th>Parça</th><th>İşi</th></tr>
+    <tr><td>NexusData</td><td>veri</td></tr>
+    <tr><td>NexusModel</td><td>katman ve tahmin</td></tr>
+    <tr><td>NexusLoss</td><td>kayıp değeri ve tahmine göre gradyan</td></tr>
+    <tr><td>NexusOptim</td><td>ağırlık güncellemesi</td></tr>
+    <tr><td>NexusTrain</td><td>adımın sırası: forward, sonra backward</td></tr>
+    <tr><td>MatrixFlash Pro</td><td>ayrı autograd grafiği. NexusLoss bu grafa bağlanmaz</td></tr>
+  </table>
+  <p>Üst katman, dönen skaler ve gradyanı isterse <code>matrix_pro::custom_loss</code> içine koyar. Derleme bağımlılığı yoktur.</p>
+</section>
+
+<section class="section" id="icerik">
+  <h2>2. İçinde ne var</h2>
+  <p>On üç aile, başlık dosyalarında sınıf ve serbest fonksiyon olarak durur. Dokümantasyon sitesi bu kümeyi <strong>88 kayıt</strong> olarak indeksler. Kayıtların bir kısmı sınıf, bir kısmı aynı formülün serbest fonksiyonudur. Asıl kaynak <code>include/nexusloss/losses/</code> altındaki başlıklardır.</p>
+  <table>
+    <tr><th>Aile</th><th>Ad alanı</th><th>Ne ölçer</th></tr>
+    <tr><td>Regresyon</td><td><code>nexusloss</code></td><td>sürekli tahmin ile hedef</td></tr>
+    <tr><td>Sınıflandırma</td><td><code>nexusloss</code> ve <code>classification</code></td><td>olasılık veya logit ile etiket</td></tr>
+    <tr><td>Segmentasyon</td><td><code>segmentation</code></td><td>maske örtüşmesi ve sınır</td></tr>
+    <tr><td>Tespit</td><td><code>detection</code></td><td>kutu örtüşmesi, odak, kutu regresyonu</td></tr>
+    <tr><td>Metrik öğrenme</td><td><code>metric</code></td><td>gömme yakınlığı ve açısal marj</td></tr>
+    <tr><td>Sıralama</td><td><code>ranking</code></td><td>çift, liste, yaklaşık NDCG</td></tr>
+    <tr><td>Üretken</td><td><code>generative</code></td><td>çekişmeli kayıp, ELBO, difüzyon</td></tr>
+    <tr><td>Öz-denetimli</td><td><code>self_supervised</code></td><td>görüntü çiftleri, çapraz korelasyon</td></tr>
+    <tr><td>Damıtım</td><td><code>distillation</code></td><td>öğretmen logit ve öznitelik</td></tr>
+    <tr><td>Dizi</td><td><code>sequence</code></td><td>CTC, maskeli token, sonraki cümle</td></tr>
+    <tr><td>Nokta bulutu</td><td><code>point_cloud</code></td><td>Chamfer ve eşit kardinaliteli EMD</td></tr>
+    <tr><td>Pekiştirme</td><td><code>reinforcement</code></td><td>politika, PPO, değer, entropi</td></tr>
+    <tr><td>Sağkalım</td><td><code>survival</code></td><td>Cox kısmi olabilirlik, Weibull</td></tr>
+  </table>
+  <p>Çekirdek iki dosyadır. <code>core/reduction.hpp</code> içinde <code>Mean</code>, <code>Sum</code>, <code>None</code>, <code>BatchMean</code> vardır. <code>core/utils.hpp</code> boyut kontrolü, <code>epsilon</code> (<code>1e-7</code>), <code>safe_log</code>, taşmayan sigmoid, <code>log_sum_exp</code>, <code>softmax</code>, <code>one_hot</code>, maske, <code>safe_sqrt</code> ve <code>safe_divide</code> tutar.</p>
+  <p>Tek giriş <code>nexusloss/nexusloss.hpp</code>dir. Bu başlık hesap yapmaz; çekirdeği ve on üç aileyi birlikte açar.</p>
+</section>
+
+<section class="section" id="mimari">
+  <h2>3. Performans mimarisi</h2>
+  <p>Hız, iş parçacığı havuzundan veya elle yazılmış SIMD çekirdeğinden gelmez. Döngüler skaler ve taşınabilirdir. <code>-O3</code> altında derleyici bunları otomatik vektörleyebilir; kütüphane buna söz vermez. Kazanç, bağımlılıksız ve tahminsiz bir sıcak yoldur.</p>
+  <table>
+    <tr><th>Karar</th><th>Etkisi</th></tr>
+    <tr><td>Header-only şablon</td><td><code>float</code> ve <code>double</code> ayrı derlenir. Sanal çağrı eleman başına değildir; <code>LossBase</code> sanal fonksiyonu vektörün tamamı için bir kez çalışır, aritmetik düz döngüdedir.</td></tr>
+    <tr><td><code>std::span</code></td><td><code>compute</code> ve <code>gradient</code> çağıranın tamponunu kopyalamadan okur. Sahiplik çağıranda kalır.</td></tr>
+    <tr><td>Analitik gradyan</td><td>Eğitim yolunda sonlu fark yoktur. Sonlu fark yalnızca testtedir: adım <code>1e-6</code>, tolerans <code>1e-5</code>.</td></tr>
+    <tr><td>Autograd şeridi yok</td><td>Ara tensör ve topoloji tutulmaz. Bellek, giriş ve çıkan gradyan kadardır. Kütüphane gradyanı katmanlara dağıtmaz.</td></tr>
+    <tr><td><code>forward</code> önbelleği</td><td>Tahmin, hedef ve ağırlık kopyalanır ki <code>backward()</code> argümansız çağrılsın. Kopya istemeyen yol <code>gradient(pred, target)</code>dir.</td></tr>
+    <tr><td>İki API şekli</td><td>Kutu, CTC ve nokta bulutu eleman bazlı tabana zorlanmaz. Skaler artı şekilli gradyan döner.</td></tr>
+    <tr><td>Taşma kontrolü</td><td><code>log_sum_exp</code> maksimumu çıkarır. Sigmoid büyük logitlerde ayrı dal kullanır. Log ve bölme <code>epsilon</code> tabanına oturur.</td></tr>
+    <tr><td>İndirgeme ölçeği</td><td><code>Mean</code> gradyanı <code>1/N</code> ile böler. <code>Sum</code> bölmez; aynı öğrenme hızıyla adım yaklaşık N kat büyür.</td></tr>
+    <tr><td>Test bağımlılığı</td><td>GoogleTest yalnızca testler açıkken indirilir. Uygulama gtest'e bağlanmaz.</td></tr>
+  </table>
+  <p>Derleyici uyarıları arayüzle birlikte gelir: MSVC'de <code>/W4 /utf-8</code>, diğerlerinde <code>-Wall -Wextra -Wpedantic</code>. Standart uzantıları kapalıdır.</p>
+</section>
+
+<section class="section" id="agac">
+  <h2>4. Klasör ve dosya yapısı</h2>
+  <pre class="tree">NexusLoss/
+├── CMakeLists.txt                 sürüm 0.1.0, INTERFACE hedef
+├── README.md
+├── include/nexusloss/
+│   ├── nexusloss.hpp              tek include
+│   ├── core/reduction.hpp         Mean, Sum, None, BatchMean
+│   ├── core/utils.hpp             kararlılık yardımcıları
+│   └── losses/
+│       ├── loss_base.hpp          eleman bazlı sözleşme
+│       ├── regression.hpp
+│       ├── classification.hpp
+│       ├── segmentation.hpp
+│       ├── detection.hpp
+│       ├── metric.hpp
+│       ├── ranking.hpp
+│       ├── generative.hpp
+│       ├── self_supervised.hpp
+│       ├── distillation.hpp
+│       ├── sequence.hpp
+│       ├── point_cloud.hpp
+│       ├── reinforcement.hpp
+│       └── survival.hpp
+├── examples/main.cpp              Huber, BCE-with-logits, çapraz entropi
+├── tests/                         aile başına bir cpp + grad_check.hpp
+└── docs/
+    ├── NexusLoss.pdf              bu referans
+    ├── NexusLoss.html             basım kaynağı
+    └── website/                   Next.js dokümantasyon sitesi</pre>
+  <p><code>build/</code> ve <code>cmake-build-debug/</code> CMake üretimidir. <code>docs/website</code> ayrı bir Node projesidir; C++ derlemesine girmez. CMake kurulum hedefi (<code>install</code>) tanımlı değildir. Tüketici <code>add_subdirectory</code> kullanır ya da <code>include/</code> yolunu derleyiciye verir.</p>
+</section>
+
+<section class="section" id="kurulum">
+  <h2>5. Kurulum ve hızlı başlangıç</h2>
+  <p>İsterler: CMake 3.20+, C++20 derleyicisi. Kütüphanenin kendisi için ağ gerekmez. Testler açıkken GoogleTest v1.14.0 yapılandırma sırasında indirilir. <code>NEXUSLOSS_BUILD_TESTS</code> ve <code>NEXUSLOSS_BUILD_EXAMPLES</code> öntanımlı açıktır.</p>
+  <pre>add_subdirectory(path/to/NexusLoss)
+target_link_libraries(uygulama PRIVATE nexusloss::nexusloss)
+target_compile_features(uygulama PRIVATE cxx_std_20)</pre>
+  <pre>cmake -S . -B build -DNEXUSLOSS_BUILD_TESTS=ON -DNEXUSLOSS_BUILD_EXAMPLES=ON
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure</pre>
+  <p>Tek yapılandırmalı üreteçlerde <code>Release</code> alt klasörü olmaz. Örnek ikili <code>basic_example</code>dir.</p>
+  <h3>Üç çağrı</h3>
+  <pre>#include &lt;nexusloss/nexusloss.hpp&gt;
+#include &lt;vector&gt;
+
+const std::vector&lt;double&gt; prediction{2.0, 4.0, 3.0};
+const std::vector&lt;double&gt; target{1.0, 5.0, 2.5};
+nexusloss::HuberLoss&lt;double&gt; huber(1.0);
+const double value = huber.forward(prediction, target).front();
+const std::vector&lt;double&gt; gradient = huber.backward();
+
+nexusloss::BCEWithLogitsLoss&lt;double&gt; bce;
+const double bce_loss = bce.forward(logits, binary_target).front();
+
+nexusloss::classification::CrossEntropyLoss&lt;double&gt; ce;
+const double ce_loss = ce.forward(class_logits, /*sınıf*/ 2);
+const std::vector&lt;double&gt; ce_grad = ce.backward();</pre>
+  <p><code>forward(...).front()</code> yalnızca <code>Mean</code> ve <code>Sum</code> için kaybın tamamıdır. <code>None</code> vektörü girişle aynı uzunluktadır. Çok sınıflı <code>CrossEntropyLoss::forward</code> doğrudan skaler döndürür.</p>
+  <pre>nexusloss::MSELoss&lt;float&gt; mse;
+const auto value = mse.compute(pred, y);     // önbellek yok
+const auto grad  = mse.gradient(pred, y);    // forward şart değil</pre>
+</section>
+
+<section class="section" id="sozlesme">
+  <h2>6. Sözleşme</h2>
+  <table>
+    <tr><th>Çağrı</th><th>Girdi</th><th>Çıktı</th><th>Önbellek</th></tr>
+    <tr><td><code>compute</code></td><td>pred, target, isteğe bağlı weight</td><td>indirgenmiş kayıp</td><td>yazmaz</td></tr>
+    <tr><td><code>gradient</code></td><td>pred, target, isteğe bağlı weight</td><td><code>dL/d(pred)</code></td><td>yazmaz</td></tr>
+    <tr><td><code>forward</code></td><td>aynı</td><td><code>compute</code> ile aynı</td><td>girdileri kopyalar</td></tr>
+    <tr><td><code>backward</code></td><td>yok</td><td>son forward'un gradyanı</td><td>okur</td></tr>
+  </table>
+  <p><code>compute_element_wise</code> ve <code>gradient_element_wise</code> indirgeme uygulamaz. Ölçek <code>gradient</code> içindedir. MSE eleman türevi <code>2(pred − target)</code>dir; <code>Mean</code> bunu ayrıca <code>1/N</code> ile çarpar.</p>
+  <ul>
+    <li>Boş span ve boyu tutmayan tensör <code>std::invalid_argument</code> atar.</li>
+    <li><code>backward()</code>, <code>forward</code> olmadan <code>std::logic_error</code> atar.</li>
+    <li>Türevi yazılmamış kayıp <code>gradient_element_wise</code> içinde hata verir. <code>ZeroOneLoss</code> sıfır altgradyan döndürür.</li>
+    <li><code>BatchMean</code> düz vektörde <code>Mean</code> ile aynıdır. Satır bazlı kayıpta batch bölümü çağırandadır.</li>
+    <li>Çok sınıflı API tek örnektir. Batch döngüsü ve indirgeme çağırandadır. Logit ham skordur; dışarıda softmax uygulayıp tekrar vermeyin.</li>
+    <li>Serbest fonksiyonlar (<code>ciou_loss</code>, <code>info_nce_loss</code>, <code>cox_ph_loss</code>) nesne tutmaz. Gradyan için eşlenik <code>*_gradient</code> veya sınıfın <code>backward</code>u kullanılır.</li>
+  </ul>
+</section>
+
+<section class="section" id="reduction">
+  <h2>7. İndirgeme ve ağırlık</h2>
+  <table>
+    <tr><th>Tip</th><th>Kayıp</th><th>Gradyan</th></tr>
+    <tr><td><code>Mean</code></td><td>toplam / N. Ağırlıklıysa payda <code>sum(w)</code>, taban <code>epsilon</code></td><td>eleman türevi × <code>1/N</code> veya × <code>w_i / sum(w)</code></td></tr>
+    <tr><td><code>Sum</code></td><td>toplam, ya da <code>sum(w_i L_i)</code></td><td>ölçek yok; ağırlık varsa <code>w_i</code> çarpanı</td></tr>
+    <tr><td><code>None</code></td><td>aynı uzunlukta vektör</td><td>her eleman kendi kaybının türevi</td></tr>
+    <tr><td><code>BatchMean</code></td><td>düz vektörde Mean</td><td>Mean ile aynı ölçek</td></tr>
+  </table>
+  <p>Sınıf dengesinde <code>classification::effective_number_class_weights</code> etkin sayı formülüyle sınıf ağırlığı üretir. <code>weighted_categorical_cross_entropy</code> ve <code>weighted_binary_cross_entropy</code> bu ağırlığı kayba taşır.</p>
+</section>
+
+<section class="section" id="karar">
+  <h2>8. Sayısal kararlılık</h2>
+  <p><code>core::epsilon&lt;T&gt;</code> değeri <code>1e-7</code>dir. <code>float</code> ve <code>double</code> aynı eşiği kullanır.</p>
+  <table>
+    <tr><th>Yardımcı</th><th>Görevi</th></tr>
+    <tr><td><code>safe_log</code></td><td><code>log(0)</code> ve negatif log</td></tr>
+    <tr><td><code>clamp_probability</code></td><td>olasılığı <code>(eps, 1−eps)</code> içine alır</td></tr>
+    <tr><td><code>sigmoid</code></td><td>logit → olasılık, taşmayan <code>exp</code></td></tr>
+    <tr><td><code>log_sum_exp</code></td><td><code>m + log(sum exp(x − m))</code>, m = max(x)</td></tr>
+    <tr><td><code>softmax</code></td><td>dağılım, toplam 1</td></tr>
+    <tr><td><code>safe_sqrt</code> / <code>safe_divide</code></td><td>negatif kök ve sıfır payda</td></tr>
+    <tr><td><code>one_hot</code></td><td>sınıf indeksi → örnek-major düz satır</td></tr>
+    <tr><td><code>apply_mask</code></td><td>pad konumunu sıfırla çarpar</td></tr>
+  </table>
+  <p>Poisson kaybı tahmin olarak log-oran bekler. Tweedie kaybı <code>1 &lt; power &lt; 2</code> ve pozitif ortalama ile birim dağılımlı sapma hesaplar.</p>
+</section>
+
+<section class="section" id="secim">
+  <h2>9. Hangi kaybı seçmeli</h2>
+  <table>
+    <tr><th>Problem</th><th>Başlangıç</th><th>Sapınca</th></tr>
+    <tr><td>Gerçek değerli regresyon</td><td><code>MSELoss</code></td><td>aykırı varsa <code>HuberLoss</code> (delta 1) veya <code>MAELoss</code></td></tr>
+    <tr><td>Pozitif, çarpık hedef</td><td><code>MSLELoss</code></td><td>sayım ise <code>PoissonLoss</code></td></tr>
+    <tr><td>Asimetrik maliyet</td><td><code>QuantileLoss</code></td><td></td></tr>
+    <tr><td>İkili etiket</td><td><code>BCELoss</code></td><td>logit varsa <code>BCEWithLogitsLoss</code></td></tr>
+    <tr><td>Tek doğru sınıf</td><td><code>CrossEntropyLoss</code></td><td>gürültülü etiket: label smoothing</td></tr>
+    <tr><td>Dengesiz sınıf</td><td><code>FocalLoss</code></td><td><code>effective_number_class_weights</code></td></tr>
+    <tr><td>Etiket ±1</td><td><code>HingeLoss</code></td><td>BCE bu kodlamayı kabul etmez</td></tr>
+    <tr><td>Piksel maskesi</td><td><code>DiceLoss</code></td><td><code>TverskyLoss</code>, <code>FocalTverskyLoss</code></td></tr>
+    <tr><td>Kutu köşeleri</td><td><code>CIoULoss</code></td><td>yalnız örtüşme: <code>IoULoss</code></td></tr>
+    <tr><td>Normalize kosinüs</td><td><code>ArcFaceLoss</code></td><td>üçlü örnek: <code>TripletLoss</code></td></tr>
+    <tr><td>Sıralı liste</td><td><code>ListNetLoss</code></td><td>çift: <code>RankNetLoss</code></td></tr>
+    <tr><td>Çekişmeli ağ</td><td><code>WassersteinLoss</code></td><td>alt sınır: <code>VAEELBOLoss</code></td></tr>
+    <tr><td>İki görünüm</td><td><code>InfoNCELoss</code></td><td><code>BarlowTwinsLoss</code></td></tr>
+    <tr><td>Öğretmen logit</td><td><code>KnowledgeDistillationLoss</code></td><td>öznitelik: <code>FeatureDistillationLoss</code></td></tr>
+    <tr><td>Hizalanmamış dizi</td><td><code>CTCLoss</code></td><td>maskeli token: MLM kaybı</td></tr>
+    <tr><td>İki nokta bulutu</td><td><code>ChamferDistanceLoss</code></td><td>küçük eşit bulut: EMD</td></tr>
+    <tr><td>Politika gradyanı</td><td><code>PolicyGradientLoss</code></td><td><code>PPOClipLoss</code>, epsilon 0.2</td></tr>
+    <tr><td>Sansürlü süre</td><td><code>CoxPHLoss</code></td><td><code>WeibullNLLLoss</code></td></tr>
+  </table>
+</section>
+
+<section class="section" id="katalog">
+  <h2>10. Kayıp kataloğu</h2>
+
+  <h3>Regresyon</h3>
+  <p>Hepsi <code>LossBase&lt;T&gt;</code>tır. <code>PoissonNLLLoss&lt;T&gt;</code>, <code>PoissonLoss&lt;T&gt;</code> takma adıdır.</p>
+  <table>
+    <tr><th>Sınıf</th><th>Özet</th></tr>
+    <tr><td><code>MSELoss</code></td><td><code>(pred − target)²</code>, gradyan <code>2(pred − target)</code></td></tr>
+    <tr><td><code>MAELoss</code></td><td>mutlak fark, L1</td></tr>
+    <tr><td><code>HuberLoss</code></td><td>küçük hatada kare, büyük hatada doğrusal; delta öntanımlı 1</td></tr>
+    <tr><td><code>LogCoshLoss</code></td><td><code>log(cosh(pred − target))</code></td></tr>
+    <tr><td><code>MSLELoss</code></td><td>log uzayında kare</td></tr>
+    <tr><td><code>QuantileLoss</code></td><td>pinball</td></tr>
+    <tr><td><code>PoissonLoss</code></td><td>negatif log olabilirlik; tahmin log-oran</td></tr>
+    <tr><td><code>TweedieLoss</code></td><td>birim dağılımlı sapma, güç (1, 2)</td></tr>
+    <tr><td><code>CauchyLoss</code></td><td><code>log(1 + ((pred−target)/scale)²)</code></td></tr>
+    <tr><td><code>CharbonnierLoss</code></td><td>yumuşatılmış L1</td></tr>
+    <tr><td><code>TukeyBiweightLoss</code></td><td>eşik dışında gradyan sıfır</td></tr>
+  </table>
+
+  <h3>Sınıflandırma</h3>
+  <p><code>nexusloss</code> içinde, <code>LossBase</code>: <code>BCELoss</code>, <code>BCEWithLogitsLoss</code>, <code>HingeLoss</code>, <code>SquaredHingeLoss</code>, <code>ExponentialLoss</code>, <code>PerceptronLoss</code>, <code>ZeroOneLoss</code>, <code>FocalLoss</code>.</p>
+  <p><code>nexusloss::classification</code> içinde, tek örnek: <code>CrossEntropyLoss</code> (label smoothing öntanımlı 0), <code>LabelSmoothingCrossEntropyLoss</code>, <code>KLDivLoss</code>.</p>
+  <p>Serbest fonksiyonlar: ikili ve kategorik çapraz entropi, sparse ve label-smoothing çeşitleri, ikili ve kategorik focal, genelleştirilmiş ve simetrik çapraz entropi, ağırlıklı BCE / CE, <code>effective_number_class_weights</code>. Hinge ailesinin hedefi −1 ve +1, BCE hedefi [0, 1] aralığıdır.</p>
+
+  <h3>Segmentasyon</h3>
+  <p>Sınıflar: <code>DiceLoss</code>, <code>IoULoss</code>, <code>TverskyLoss</code>, <code>FocalTverskyLoss</code>, <code>LovaszSoftmaxLoss</code>. Serbest: combo (Dice + BCE), boundary, Hausdorff, Lovász-hinge, Lovász-softmax. Yumuşak maskeler olasılıktır. Lovász-hinge logit ister. Hausdorff uzaklık dönüşümü çalıştırmaz; sınır mesafe haritasını çağıran verir.</p>
+
+  <h3>Tespit</h3>
+  <p>Köşe sırası <code>[x_min, y_min, x_max, y_max]</code>. Kayıplar: IoU, GIoU, DIoU, CIoU ve gradyanları. <code>DetectionFocalLoss</code> logit alır; alfa 0.25, gama 2. <code>SmoothL1BBoxLoss</code> kodlanmış ofset içindir (dx, dy, dw, dh); beta öntanımlı 1. Köşe kutusu ile aynı tensör değildir.</p>
+
+  <h3>Metrik öğrenme</h3>
+  <p><code>ContrastiveLoss</code>, <code>TripletLoss</code>, <code>ArcFaceLoss</code> (marj 0.5, ölçek 64), <code>CosFaceLoss</code> (marj 0.35, ölçek 64). Serbest: kosinüs gömme, center, n-pair, SphereFace. Açısal kayıplar normalize edilmiş kosinüs logiti bekler. Gradyanlar giriş sırasıyla art arda durur.</p>
+
+  <h3>Sıralama</h3>
+  <p><code>MarginRankingLoss</code>, <code>RankNetLoss</code>, <code>ListNetLoss</code>, <code>ListMLELoss</code>. Serbest: BPR, yaklaşık NDCG, <code>soft_rank_loss</code> (doğrudan <code>approx_ndcg_loss</code>), LambdaRank. Yüksek skor daha iyidir.</p>
+
+  <h3>Üretken modeller</h3>
+  <p>Sınıflar: <code>AdversarialLoss</code>, <code>WassersteinLoss</code>, <code>LSGANLoss</code>, <code>VAEELBOLoss</code>. Serbest: hinge GAN, öznitelik eşleme, döngü ve kimlik, algısal, stil, toplam değişim, difüzyon epsilon, L1 ve L2. Algısal ve stil kayıpları VGG çalıştırmaz. Toplam değişim görüntüsü satır-major, kanal-sondadır: <code>(y·W + x)·C + c</code>. Difüzyon kaybı gürültü ile tahminin kare farkının ortalamasıdır. Ayırt edici ve üretici gradyanları ayrıdır.</p>
+
+  <h3>Öz-denetimli öğrenme</h3>
+  <p><code>InfoNCELoss</code> sıcaklığı öntanımlı 0.1'dir. <code>NTXentLoss</code> onun alt sınıfıdır. Ayrıca <code>BYOLLoss</code> ve <code>BarlowTwinsLoss</code>. Serbest: VICReg ve DINO. Artırma hattı bu depoda yoktur; fonksiyon verilen benzerlik veya öznitelik üzerinde kapanır.</p>
+
+  <h3>Damıtım, dizi, nokta bulutu</h3>
+  <p><code>KnowledgeDistillationLoss</code> sıcaklığın karesi ile ölçeklenmiş KL kullanır. <code>FeatureDistillationLoss</code> ve <code>AttentionTransferLoss</code> öğretmeni eğitmez.</p>
+  <p><code>CTCLoss</code> zaman-major logit bekler: <code>[zaman, sınıf]</code>, boşluk öntanımlı 0. İleri-geri log uzayında toplanır. <code>MaskedSequenceCrossEntropyLoss</code> maskeli token içindir. <code>next_sentence_prediction_loss</code> ikili karardır.</p>
+  <p><code>ChamferDistanceLoss</code> en yakın nokta uzaklıklarını toplar; düz bellek, öntanımlı boyut 3. <code>EarthMoverDistanceLoss</code> eşit kardinalite, Macar eşlemesi, <code>O(n³)</code>. Büyük bulutta Chamfer seçilir.</p>
+
+  <h3>Pekiştirme ve sağkalım</h3>
+  <table>
+    <tr><th>Sınıf</th><th>Anlamı</th></tr>
+    <tr><td><code>PolicyGradientLoss</code></td><td><code>−mean(log π · A)</code></td></tr>
+    <tr><td><code>PPOClipLoss</code></td><td>kırpılmış vekil, epsilon 0.2</td></tr>
+    <tr><td><code>ValueLoss</code></td><td>değer fonksiyonu hatası</td></tr>
+    <tr><td><code>EntropyBonusLoss</code></td><td><code>−H</code>; giriş olasılıktır, logit değildir</td></tr>
+    <tr><td><code>CoxPHLoss</code></td><td>Breslow risk kümesi; <code>observed</code> bool</td></tr>
+    <tr><td><code>WeibullNLLLoss</code></td><td>log-ölçek ve log-şekil ile negatif log olabilirlik</td></tr>
+  </table>
+  <p>Ortam, avantaj tahmini ve sansür kodlaması çağıranın verisindedir. Sansürlü Cox gözlemi paya girmez, risk kümesinde kalır.</p>
+</section>
+
+<section class="section" id="sekil">
+  <h2>11. Şekil ve kodlama</h2>
+  <ul>
+    <li>BCE hedefleri [0, 1]. Hinge ailesi −1 ve +1.</li>
+    <li>Çok sınıflı API: logit vektörü + <code>size_t</code> sınıf indeksi, tek örnek.</li>
+    <li>Poisson tahminleri log-orandır.</li>
+    <li>Tweedie gücü (1, 2) açık aralığında, ortalama pozitif.</li>
+    <li>Tespit kutuları minimum x, minimum y, maksimum x, maksimum y.</li>
+    <li><code>SmoothL1BBoxLoss</code> kodlanmış ofset içindir.</li>
+    <li>CTC düzeni zaman × sınıf, zaman dışta, boşluk indeksi öntanımlı 0.</li>
+    <li>Nokta bulutu düz bellek, öntanımlı nokta boyutu 3.</li>
+    <li>Açısal marj kayıpları normalize kosinüs logiti bekler.</li>
+    <li>Algısal, stil ve Hausdorff kayıpları hazır öznitelik veya mesafe haritası ister.</li>
+    <li>Toplam değişim görüntüsü satır-major, kanal-sondadır.</li>
+    <li><code>EntropyBonusLoss</code> olasılık dağılımı alır.</li>
+    <li>Şablon tipi tahminin tipiyle aynıdır. <code>float</code> ile <code>double</code> karıştırılmaz.</li>
+  </ul>
+  <h3>Sık hatalar</h3>
+  <table>
+    <tr><th>Belirti</th><th>Düzeltme</th></tr>
+    <tr><td><code>backward()</code> istisna</td><td>önce <code>forward</code>, ya da <code>gradient(pred, target)</code></td></tr>
+    <tr><td>gradyan N kat büyük</td><td>indirgeme <code>Sum</code>; <code>Mean</code>e geçin veya öğrenme hızını bölün</td></tr>
+    <tr><td>batch çapraz entropisi tek sayı değil</td><td>API tek örnektir; döngü çağırandadır</td></tr>
+    <tr><td>BCE, ±1 etiketle anlamsız</td><td>±1 hinge ailesine gider</td></tr>
+    <tr><td>softmax sonrası çapraz entropi</td><td>fonksiyon logit ister, log-sum-exp içeridedir</td></tr>
+    <tr><td>CTC boyutu tutmuyor</td><td>zaman × sınıf; boşluk 0 değilse kurucuda verin</td></tr>
+    <tr><td>EMD yavaş</td><td>eşit kardinalite ve O(n³); büyük bulutta Chamfer</td></tr>
+    <tr><td>boş vektör</td><td><code>check_same_size</code> reddeder</td></tr>
+  </table>
+</section>
+
+<section class="section" id="test">
+  <h2>12. Test ve dokümantasyon</h2>
+  <p>Her aile için <code>tests/test_*.cpp</code> vardır. <code>test_smoke.cpp</code> başlıkların birlikte derlendiğini ve temel çağrıların sonlu kaldığını yoklar. Analitik gradyan merkezi farka bağlanır:</p>
+  <pre>sayısal ≈ (L(x + h) − L(x − h)) / (2h)
+h = 1e-6 ,  tolerans = 1e-5</pre>
+  <p><code>expect_finite</code> her bileşenin sonlu olduğunu ister. Keşif <code>gtest_discover_tests</code> ile yapılır. Yeni kayıp eklerken aynı kalıp yeterlidir: bilinen bir noktada skaler, sonlu farkla gradyan, boş ve aykırı span için istisna.</p>
+  <h3>Site</h3>
+  <p><code>docs/website</code> bir Next.js uygulamasıdır. Metin başlıklardan otomatik üretilmez; katalog <code>docs/website/lib/docs/</code> altındadır.</p>
+  <ul>
+    <li><code>/</code> genel bakış, hızlı başlangıç, kıyas.</li>
+    <li><code>/docs</code> 13 aile, 88 kayıt, formül, argüman, gradyan, kod.</li>
+    <li><code>/api/locale</code> ülke ipucuna göre dil. Türkiye için Türkçe, aksi halde İngilizce. Seçim <code>nexusloss-lang</code> anahtarında kalır.</li>
+  </ul>
+  <pre>cd docs\website
+npm install
+npm run dev</pre>
+  <footer class="colophon">
+    NexusLoss teknik referans · sürüm 0.1.0 · Muhammed Fatih Şahin ·
+    Bursa Teknik Üniversitesi, Bilgisayar Mühendisliği, 1. sınıf.
+    Sözleşmenin kaynak kodu <code>include/nexusloss</code> altındadır.
+  </footer>
+</section>
+
+</body>
+</html>

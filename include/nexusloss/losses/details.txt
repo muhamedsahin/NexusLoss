@@ -1,0 +1,35 @@
+=== AMAÇ ===
+Bu klasör, NexusLoss'un somut loss fonksiyonlarını tutar. Her dosya bir problem
+kategorisidir. Hepsi forward değer ve, türevlenebilir olanlar, analitik gradyan üretir.
+
+=== İÇERİK ===
+- loss_base.hpp: eleman bazlı loss'ların ortak atası. compute(), gradient(),
+  forward() ve backward() burada. Dosya core/'a taşınmadı: mevcut include'lar
+  `loss_base.hpp` diye yanındaki dosyayı açıyor ve sınıf, loss sözleşmesinin
+  kendisi. core/ sayısal yardımcılarda kaldı.
+- classification.hpp: CrossEntropy, BCE, BCEWithLogits, Focal, label smoothing,
+  Hinge, KL.
+- regression.hpp: MSE, MAE, Huber, LogCosh, MSLE, Quantile, Poisson NLL, Tweedie,
+  Cauchy, Charbonnier, Tukey.
+- segmentation.hpp: Dice, IoU, Tversky, Focal Tversky, Lovasz-Softmax.
+- detection.hpp: IoU, GIoU, DIoU, CIoU, DetectionFocal, Smooth-L1 kutu kaybı.
+- distillation.hpp: sıcaklıklı KL, özellik MSE, attention transfer.
+- generative.hpp: vanilla GAN, WGAN, LSGAN, VAE ELBO ve yardımcı görüntü kayıpları.
+- metric.hpp: contrastive, triplet, ArcFace, CosFace.
+- point_cloud.hpp: Chamfer ve Hungarian EMD.
+- ranking.hpp: margin ranking, RankNet, ListNet, ListMLE.
+- reinforcement.hpp: policy gradient, PPO clip, value, entropy bonus.
+- self_supervised.hpp: InfoNCE, NT-Xent, BYOL, Barlow Twins.
+- sequence.hpp: CTC ve maskeli dizi cross-entropy.
+- survival.hpp: Cox PH ve Weibull NLL.
+
+=== NE ZAMAN KULLANILIR ===
+NexusTrain problem tipine göre buradan bir sınıf seçer. Eleman bazlı kayıplar
+LossBase üzerinden Mean/Sum/None indirger. Yapısal kayıplar (kutu, dizi, bulut)
+kendi forward/backward imzalarını kullanır çünkü tek bir düz span'e sığmazlar.
+
+=== BAĞIMLILIKLAR ===
+- nexusloss/core/reduction.hpp
+- nexusloss/core/utils.hpp
+- nexusloss/losses/loss_base.hpp
+- C++20 standart kütüphanesi
