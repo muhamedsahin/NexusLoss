@@ -13,8 +13,11 @@
 #include <cmath>
 #include <span>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 #include "loss_base.hpp"
+#include "regression.hpp"
+#include "../core/fused.hpp"
 
 namespace nexusloss {
 namespace classification {
@@ -62,10 +65,22 @@ T categorical_cross_entropy(std::span<const T> logits, std::span<const T> target
 template<typename T>
 T sparse_categorical_cross_entropy(std::span<const T> logits, size_t target,
                                    T label_smoothing = T(0)) {
+    if (logits.empty()) throw std::invalid_argument("NexusLoss: categorical cross entropy requires equal non-empty vectors");
     if (target >= logits.size()) throw std::out_of_range("NexusLoss: class index is outside logits");
-    std::vector<T> one_hot(logits.size(), T(0));
-    one_hot[target] = T(1);
-    return categorical_cross_entropy<T>(logits, one_hot, label_smoothing);
+    if (label_smoothing < T(0) || label_smoothing >= T(1))
+        throw std::invalid_argument("NexusLoss: label smoothing must be in [0, 1)");
+    const T maximum = *std::max_element(logits.begin(), logits.end());
+    T exp_sum = T(0);
+    for (T logit : logits) exp_sum += std::exp(logit - maximum);
+    const T log_normalizer = maximum + std::log(exp_sum);
+    const T uniform = label_smoothing / static_cast<T>(logits.size());
+    const T on_target = (T(1) - label_smoothing) + uniform;
+    T weighted = T(0);
+    for (size_t i = 0; i < logits.size(); ++i) {
+        const T smooth = i == target ? on_target : uniform;
+        weighted += smooth * (logits[i] - log_normalizer);
+    }
+    return -weighted;
 }
 
 template<typename T>
@@ -170,9 +185,9 @@ T normalized_binary_loss(T probability, T target) {
  * birebir oturur. log-sum-exp sayesinde buyuk logit'lerde p sonlu kalir.
  */
 template<typename T>
-std::vector<T> categorical_cross_entropy_gradient(std::span<const T> logits, std::span<const T> target,
-                                                   T label_smoothing = T(0)) {
-    if (logits.empty() || logits.size() != target.size())
+void categorical_cross_entropy_gradient_into(std::span<const T> logits, std::span<const T> target,
+                                             std::span<T> grad_out, T label_smoothing = T(0)) {
+    if (logits.empty() || logits.size() != target.size() || grad_out.size() != logits.size())
         throw std::invalid_argument("NexusLoss: categorical cross entropy requires equal non-empty vectors");
     if (label_smoothing < T(0) || label_smoothing >= T(1))
         throw std::invalid_argument("NexusLoss: label smoothing must be in [0, 1)");
@@ -183,14 +198,39 @@ std::vector<T> categorical_cross_entropy_gradient(std::span<const T> logits, std
         target_sum += value;
     }
     if (!(target_sum > T(0))) throw std::invalid_argument("NexusLoss: categorical target must have positive mass");
-    std::vector<T> grad(logits.size());
+    const T uniform = label_smoothing / static_cast<T>(logits.size());
     for (size_t i = 0; i < logits.size(); ++i) {
         const T normalized_target = target[i] / target_sum;
-        const T smooth_target = (T(1) - label_smoothing) * normalized_target
-                                + label_smoothing / static_cast<T>(logits.size());
-        grad[i] = std::exp(logits[i] - log_normalizer) - smooth_target;
+        const T smooth_target = (T(1) - label_smoothing) * normalized_target + uniform;
+        grad_out[i] = std::exp(logits[i] - log_normalizer) - smooth_target;
     }
+}
+
+template<typename T>
+std::vector<T> categorical_cross_entropy_gradient(std::span<const T> logits, std::span<const T> target,
+                                                   T label_smoothing = T(0)) {
+    std::vector<T> grad(logits.size());
+    categorical_cross_entropy_gradient_into<T>(logits, target, grad, label_smoothing);
     return grad;
+}
+
+/// Sinif indeksinden one-hot vektor ayirmadan ayni turevi yazar.
+template<typename T>
+void sparse_categorical_cross_entropy_gradient_into(std::span<const T> logits, size_t target_class,
+                                                    std::span<T> grad_out, T label_smoothing = T(0)) {
+    if (logits.empty() || grad_out.size() != logits.size())
+        throw std::invalid_argument("NexusLoss: categorical cross entropy requires equal non-empty vectors");
+    if (target_class >= logits.size()) throw std::out_of_range("NexusLoss: class index is outside logits");
+    if (label_smoothing < T(0) || label_smoothing >= T(1))
+        throw std::invalid_argument("NexusLoss: label smoothing must be in [0, 1)");
+    const T log_normalizer = core::log_sum_exp<T>(logits);
+    const T uniform = label_smoothing / static_cast<T>(logits.size());
+    const T on_target = (T(1) - label_smoothing) + uniform;
+    const T off_target = uniform;
+    for (size_t i = 0; i < logits.size(); ++i) {
+        const T smooth_target = i == target_class ? on_target : off_target;
+        grad_out[i] = std::exp(logits[i] - log_normalizer) - smooth_target;
+    }
 }
 
 /**
@@ -215,16 +255,21 @@ T kl_divergence(std::span<const T> prediction, std::span<const T> target) {
 
 /// @brief d/d(prediction_i) = -target_i / prediction_i. Kelepce disinda clamp turevi 0.
 template<typename T>
-std::vector<T> kl_divergence_gradient(std::span<const T> prediction, std::span<const T> target) {
-    if (prediction.empty() || prediction.size() != target.size())
+void kl_divergence_gradient_into(std::span<const T> prediction, std::span<const T> target, std::span<T> grad_out) {
+    if (prediction.empty() || prediction.size() != target.size() || grad_out.size() != prediction.size())
         throw std::invalid_argument("NexusLoss: KL inputs must have equal non-zero sizes");
-    std::vector<T> grad(prediction.size());
     for (size_t i = 0; i < prediction.size(); ++i) {
         if (target[i] < T(0) || prediction[i] < T(0))
             throw std::invalid_argument("NexusLoss: KL inputs must be non-negative");
-        if (prediction[i] <= core::epsilon<T>) grad[i] = T(0);
-        else grad[i] = -target[i] / prediction[i];
+        if (prediction[i] <= core::epsilon<T>) grad_out[i] = T(0);
+        else grad_out[i] = -target[i] / prediction[i];
     }
+}
+
+template<typename T>
+std::vector<T> kl_divergence_gradient(std::span<const T> prediction, std::span<const T> target) {
+    std::vector<T> grad(prediction.size());
+    kl_divergence_gradient_into<T>(prediction, target, grad);
     return grad;
 }
 
@@ -255,11 +300,17 @@ public:
         return sparse_categorical_cross_entropy<T>(logits, target_class, smoothing_);
     }
 
+    [[nodiscard]] size_t gradient_size() const noexcept { return cached_logits_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+
+    /// One-hot vektor ayirmaz. Softmax - yumusatilmis hedef dogrudan `grad_out` icine yazilir.
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        std::vector<T> one_hot(cached_logits_.size(), T(0));
-        one_hot[cached_class_] = T(1);
-        return categorical_cross_entropy_gradient<T>(cached_logits_, one_hot, smoothing_);
+        sparse_categorical_cross_entropy_gradient_into<T>(cached_logits_, cached_class_, grad_out, smoothing_);
     }
 
 private:
@@ -281,7 +332,9 @@ class LabelSmoothingCrossEntropyLoss {
 public:
     explicit LabelSmoothingCrossEntropyLoss(T smoothing = T(0.1)) : inner_(smoothing) {}
     T forward(std::span<const T> logits, size_t target_class) { return inner_.forward(logits, target_class); }
+    [[nodiscard]] size_t gradient_size() const noexcept { return inner_.gradient_size(); }
     std::vector<T> backward() const { return inner_.backward(); }
+    void backward_into(std::span<T> grad_out) const { inner_.backward_into(grad_out); }
 private:
     CrossEntropyLoss<T> inner_;
 };
@@ -304,9 +357,15 @@ public:
         ready_ = true;
         return kl_divergence<T>(prediction, target);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return cached_prediction_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return kl_divergence_gradient<T>(cached_prediction_, cached_target_);
+        kl_divergence_gradient_into<T>(cached_prediction_, cached_target_, grad_out);
     }
 private:
     std::vector<T> cached_prediction_;
@@ -328,18 +387,24 @@ public:
     }
 
     // L = -[y log p + (1-y) log(1-p)]. Ic bolgede dL/dp = (p - y) / (p(1-p)).
-    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-        std::vector<T> grad(pred.size());
+    // Uçlarda p epsilon disina tasarsa turev 0 birakilir; clamp'in turevi orada yoktur.
+    void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                    std::span<T> grad_out) const override {
+        this->require_gradient_span(pred, grad_out);
         for (size_t i = 0; i < pred.size(); ++i) {
             if (target[i] < T(0) || target[i] > T(1))
                 throw std::invalid_argument("NexusLoss: BCE targets must be in [0, 1]");
             if (pred[i] <= core::epsilon<T> || pred[i] >= T(1) - core::epsilon<T>) {
-                grad[i] = T(0);
+                grad_out[i] = T(0);
                 continue;
             }
             const T p = pred[i];
-            grad[i] = (p - target[i]) / (p * (T(1) - p));
+            grad_out[i] = (p - target[i]) / (p * (T(1) - p));
         }
+    }
+    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+        std::vector<T> grad(pred.size());
+        gradient_element_wise_into(pred, target, grad);
         return grad;
     }
 };
@@ -356,14 +421,29 @@ public:
     }
 
     // Kararli formun turevi, sigmoid(x) - y. Forward'daki max/log1p adimlari saklanmaz.
-    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-        std::vector<T> grad(pred.size());
+    void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                    std::span<T> grad_out) const override {
+        this->require_gradient_span(pred, grad_out);
         for (size_t i = 0; i < pred.size(); ++i) {
             if (target[i] < T(0) || target[i] > T(1))
                 throw std::invalid_argument("NexusLoss: BCE targets must be in [0, 1]");
-            grad[i] = core::stable_sigmoid(pred[i]) - target[i];
+            grad_out[i] = core::stable_sigmoid(pred[i]) - target[i];
         }
+    }
+    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+        std::vector<T> grad(pred.size());
+        gradient_element_wise_into(pred, target, grad);
         return grad;
+    }
+    double forward_and_backward(std::span<const T> pred, std::span<const T> target, std::span<T> grad_out) {
+        this->require_gradient_span(pred, grad_out);
+        if constexpr (std::is_same_v<T, float>) {
+            const bool mean = this->get_reduction() == core::ReductionType::Mean ||
+                              this->get_reduction() == core::ReductionType::BatchMean;
+            return fused::bce_with_logits(pred.data(), target.data(), grad_out.data(), pred.size(), mean ? 0 : 1);
+        }
+        this->gradient_into(pred, target, grad_out);
+        return static_cast<double>(this->compute(pred, target)[0]);
     }
 };
 
@@ -379,11 +459,16 @@ public:
     }
 
     // Margin'in icinde turev -y, disinda 0. Esikte 0 subgradyani kullanilir.
+    void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                    std::span<T> grad_out) const override {
+        this->require_gradient_span(pred, grad_out);
+        for (size_t i = 0; i < pred.size(); ++i) {
+            grad_out[i] = pred[i] * target[i] < T(1) ? -target[i] : T(0);
+        }
+    }
     std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
         std::vector<T> grad(pred.size());
-        for (size_t i = 0; i < pred.size(); ++i) {
-            grad[i] = pred[i] * target[i] < T(1) ? -target[i] : T(0);
-        }
+        gradient_element_wise_into(pred, target, grad);
         return grad;
     }
 };
@@ -401,12 +486,17 @@ public:
         return result;
     }
 
-    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-        std::vector<T> grad(pred.size());
+    void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                    std::span<T> grad_out) const override {
+        this->require_gradient_span(pred, grad_out);
         for (size_t i = 0; i < pred.size(); ++i) {
             const T margin = T(1) - pred[i] * target[i];
-            grad[i] = margin > T(0) ? T(-2) * margin * target[i] : T(0);
+            grad_out[i] = margin > T(0) ? T(-2) * margin * target[i] : T(0);
         }
+    }
+    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+        std::vector<T> grad(pred.size());
+        gradient_element_wise_into(pred, target, grad);
         return grad;
     }
 };
@@ -421,10 +511,15 @@ public:
         return result;
     }
 
+    void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                    std::span<T> grad_out) const override {
+        this->require_gradient_span(pred, grad_out);
+        for (size_t i = 0; i < pred.size(); ++i)
+            grad_out[i] = -target[i] * std::exp(-target[i] * pred[i]);
+    }
     std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
         std::vector<T> grad(pred.size());
-        for (size_t i = 0; i < pred.size(); ++i)
-            grad[i] = -target[i] * std::exp(-target[i] * pred[i]);
+        gradient_element_wise_into(pred, target, grad);
         return grad;
     }
 };
@@ -439,10 +534,15 @@ public:
         return result;
     }
 
+    void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                    std::span<T> grad_out) const override {
+        this->require_gradient_span(pred, grad_out);
+        for (size_t i = 0; i < pred.size(); ++i)
+            grad_out[i] = target[i] * pred[i] < T(0) ? -target[i] : T(0);
+    }
     std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
         std::vector<T> grad(pred.size());
-        for (size_t i = 0; i < pred.size(); ++i)
-            grad[i] = target[i] * pred[i] < T(0) ? -target[i] : T(0);
+        gradient_element_wise_into(pred, target, grad);
         return grad;
     }
 };
@@ -458,9 +558,16 @@ public:
     }
 
     // 0-1 kaybi hemen hemen her yerde turevi sifirdir. Egiten adim bunu kullanmamali.
-    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+    void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                    std::span<T> grad_out) const override {
         (void)target;
-        return std::vector<T>(pred.size(), T(0));
+        this->require_gradient_span(pred, grad_out);
+        for (T& value : grad_out) value = T(0);
+    }
+    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+        std::vector<T> grad(pred.size());
+        gradient_element_wise_into(pred, target, grad);
+        return grad;
     }
 };
 
@@ -487,13 +594,14 @@ public:
      *   dL/dp_t = a_t * g * (1-p_t)^{g-1} * log(p_t) - a_t * (1-p_t)^g / p_t
      *   d p_t / d p = +1 hedef >= 0.5 ise, aksi halde -1
      */
-    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-        std::vector<T> grad(pred.size());
+    void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                    std::span<T> grad_out) const override {
+        this->require_gradient_span(pred, grad_out);
         for (size_t i = 0; i < pred.size(); ++i) {
             if (target[i] < T(0) || target[i] > T(1))
                 throw std::invalid_argument("NexusLoss: focal targets must be in [0, 1]");
             if (pred[i] <= core::epsilon<T> || pred[i] >= T(1) - core::epsilon<T>) {
-                grad[i] = T(0);
+                grad_out[i] = T(0);
                 continue;
             }
             const T p = pred[i];
@@ -508,8 +616,12 @@ public:
                 d_pt = alpha_t * gamma_ * std::pow(one_minus, gamma_ - T(1)) * std::log(pt)
                        - alpha_t * std::pow(one_minus, gamma_) / pt;
             }
-            grad[i] = d_pt * (positive ? T(1) : T(-1));
+            grad_out[i] = d_pt * (positive ? T(1) : T(-1));
         }
+    }
+    std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+        std::vector<T> grad(pred.size());
+        gradient_element_wise_into(pred, target, grad);
         return grad;
     }
 };

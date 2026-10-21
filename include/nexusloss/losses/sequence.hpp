@@ -6,6 +6,10 @@
  * Hedef blank icermez. Maskeli cross-entropy sadece isaretli token'larin
  * ortalamasini alir; pad konumlarinin gradyani sifirdir.
  *
+ * CTC ileri gecisi log-softmax ve alpha tablosunu `CTCWorkspace` icinde
+ * birakir. Geri gecis yalnizca beta ve posterioru ekler; ileri gecisin isi
+ * tekrar yapilmaz ve tekrar kullanilan tablolar sicak dongude bellek ayirmaz.
+ *
  * @see Graves et al., CTC, 2006
  * @see core/utils.hpp
  */
@@ -22,62 +26,182 @@
 
 namespace nexusloss::sequence {
 
+/**
+ * @brief CTC dinamik programlama tablolari.
+ *
+ * `log_prob` [time, class], `alpha` ve `beta` [time, state] duzenindedir.
+ * `log_likelihood` son ileri gecisin log Z degeridir.
+ */
 template<typename T>
-T ctc_loss(std::span<const T> logits, size_t timesteps, size_t classes,
-           std::span<const size_t> labels, size_t blank = 0) {
+struct CTCWorkspace {
+    std::vector<size_t> extended;
+    std::vector<T> log_prob, alpha, beta;
+    T log_likelihood = T(0);
+    size_t timesteps = 0, classes = 0, states = 0, blank = 0;
+};
+
+namespace detail {
+
+template<typename T>
+void validate_ctc(std::span<const T> logits, size_t timesteps, size_t classes,
+                  std::span<const size_t> labels, size_t blank) {
     if (!timesteps || !classes || logits.size() != timesteps * classes || blank >= classes)
         throw std::invalid_argument("NexusLoss: CTC logits must be flattened time-major [time, class]");
     if (labels.size() > timesteps) throw std::invalid_argument("NexusLoss: CTC target is longer than input");
     for (size_t label : labels)
         if (label >= classes || label == blank) throw std::invalid_argument("NexusLoss: invalid CTC target label");
-    const T negative_infinity = -std::numeric_limits<T>::infinity();
-    const size_t states = labels.size() * 2 + 1;
-    std::vector<size_t> extended(states, blank);
-    for (size_t i = 0; i < labels.size(); ++i) extended[i * 2 + 1] = labels[i];
-    std::vector<T> previous(states, negative_infinity), current(states, negative_infinity);
-    const auto log_probability = [&](size_t time, size_t klass) {
-        T maximum = logits[time * classes];
-        for (size_t c = 1; c < classes; ++c) maximum = std::max(maximum, logits[time * classes + c]);
-        T sum = T(0);
-        for (size_t c = 0; c < classes; ++c) sum += std::exp(logits[time * classes + c] - maximum);
-        return logits[time * classes + klass] - maximum - std::log(sum);
-    };
-    const auto log_add = [negative_infinity](T a, T b) {
-        if (a == negative_infinity) return b;
-        if (b == negative_infinity) return a;
-        const T maximum = std::max(a, b);
-        return maximum + std::log1p(std::exp(std::min(a, b) - maximum));
-    };
-    previous[0] = log_probability(0, blank);
-    if (states > 1) previous[1] = log_probability(0, extended[1]);
-    for (size_t t = 1; t < timesteps; ++t) {
-        std::fill(current.begin(), current.end(), negative_infinity);
-        for (size_t s = 0; s < states; ++s) {
-            T total = previous[s];
-            if (s > 0) total = log_add(total, previous[s - 1]);
-            if (s > 1 && extended[s] != blank && extended[s] != extended[s - 2])
-                total = log_add(total, previous[s - 2]);
-            current[s] = total + log_probability(t, extended[s]);
-        }
-        previous.swap(current);
-    }
-    const T log_likelihood = states == 1 ? previous[0] : log_add(previous[states - 1], previous[states - 2]);
-    return -log_likelihood;
 }
+
+template<typename T>
+T log_add(T a, T b) {
+    constexpr T negative_infinity = -std::numeric_limits<T>::infinity();
+    if (a == negative_infinity) return b;
+    if (b == negative_infinity) return a;
+    const T maximum = std::max(a, b);
+    return maximum + std::log1p(std::exp(std::min(a, b) - maximum));
+}
+
+} // namespace detail
+
+/// @brief CTC ileri gecisi. log-softmax ve alpha tablosunu workspace'e yazar, -log Z dondurur.
+template<typename T>
+T ctc_forward(std::span<const T> logits, size_t timesteps, size_t classes,
+              std::span<const size_t> labels, size_t blank, CTCWorkspace<T>& workspace) {
+    detail::validate_ctc(logits, timesteps, classes, labels, blank);
+    constexpr T negative_infinity = -std::numeric_limits<T>::infinity();
+    const size_t states = labels.size() * 2 + 1;
+    workspace.timesteps = timesteps;
+    workspace.classes = classes;
+    workspace.states = states;
+    workspace.blank = blank;
+    workspace.extended.assign(states, blank);
+    for (size_t i = 0; i < labels.size(); ++i) workspace.extended[i * 2 + 1] = labels[i];
+    workspace.log_prob.resize(timesteps * classes);
+    for (size_t time = 0; time < timesteps; ++time) {
+        const auto row = logits.subspan(time * classes, classes);
+        core::log_softmax_into<T>(row, std::span<T>(workspace.log_prob).subspan(time * classes, classes));
+    }
+    const auto& extended = workspace.extended;
+    const auto& log_prob = workspace.log_prob;
+    auto& alpha = workspace.alpha;
+    alpha.assign(timesteps * states, negative_infinity);
+    alpha[0] = log_prob[blank];
+    if (states > 1) alpha[1] = log_prob[extended[1]];
+    for (size_t time = 1; time < timesteps; ++time) {
+        for (size_t state = 0; state < states; ++state) {
+            T total = alpha[(time - 1) * states + state];
+            if (state > 0) total = detail::log_add(total, alpha[(time - 1) * states + state - 1]);
+            if (state > 1 && extended[state] != blank && extended[state] != extended[state - 2])
+                total = detail::log_add(total, alpha[(time - 1) * states + state - 2]);
+            alpha[time * states + state] = total + log_prob[time * classes + extended[state]];
+        }
+    }
+    const size_t last = (timesteps - 1) * states;
+    workspace.log_likelihood = states == 1
+        ? alpha[last]
+        : detail::log_add(alpha[last + states - 1], alpha[last + states - 2]);
+    return -workspace.log_likelihood;
+}
+
+/**
+ * @brief Workspace'teki ileri gecisten CTC turevini yazar (Graves et al., 2006).
+ *
+ * Bir (t, k) icin posterior, o etiketi basan tum hizalama durumlarinin
+ * alpha*beta kutlesidir. Loss -log Z oldugu icin dL/d logit = softmax - posterior.
+ * Hedef verilen surede hizalanamiyorsa (Z = 0) turev sifir yazilir.
+ */
+template<typename T>
+void ctc_backward_into(CTCWorkspace<T>& workspace, std::span<T> grad_out) {
+    constexpr T negative_infinity = -std::numeric_limits<T>::infinity();
+    const size_t timesteps = workspace.timesteps, classes = workspace.classes, states = workspace.states;
+    const size_t blank = workspace.blank;
+    if (grad_out.size() != timesteps * classes)
+        throw std::invalid_argument("NexusLoss: CTC grad_out must match [time, class]");
+    if (workspace.log_likelihood == negative_infinity) {
+        std::fill(grad_out.begin(), grad_out.end(), T(0));
+        return;
+    }
+    const auto& extended = workspace.extended;
+    const auto& log_prob = workspace.log_prob;
+    const auto& alpha = workspace.alpha;
+    auto& beta = workspace.beta;
+    beta.assign(timesteps * states, negative_infinity);
+    beta[(timesteps - 1) * states + states - 1] = log_prob[(timesteps - 1) * classes + extended[states - 1]];
+    if (states > 1)
+        beta[(timesteps - 1) * states + states - 2] = log_prob[(timesteps - 1) * classes + extended[states - 2]];
+    for (size_t time = timesteps - 1; time-- > 0;) {
+        for (size_t state = 0; state < states; ++state) {
+            T total = beta[(time + 1) * states + state];
+            if (state + 1 < states) total = detail::log_add(total, beta[(time + 1) * states + state + 1]);
+            if (state + 2 < states && extended[state + 2] != blank && extended[state + 2] != extended[state])
+                total = detail::log_add(total, beta[(time + 1) * states + state + 2]);
+            beta[time * states + state] = log_prob[time * classes + extended[state]] + total;
+        }
+    }
+    std::fill(grad_out.begin(), grad_out.end(), T(0));
+    for (size_t time = 0; time < timesteps; ++time)
+        for (size_t state = 0; state < states; ++state) {
+            const T emission = log_prob[time * classes + extended[state]];
+            const T occupancy = alpha[time * states + state] + beta[time * states + state]
+                                - emission - workspace.log_likelihood;
+            if (occupancy == negative_infinity) continue;
+            grad_out[time * classes + extended[state]] += std::exp(occupancy);
+        }
+    for (size_t index = 0; index < grad_out.size(); ++index)
+        grad_out[index] = std::exp(log_prob[index]) - grad_out[index];
+}
+
+template<typename T>
+T ctc_loss(std::span<const T> logits, size_t timesteps, size_t classes,
+           std::span<const size_t> labels, size_t blank = 0) {
+    CTCWorkspace<T> workspace;
+    return ctc_forward<T>(logits, timesteps, classes, labels, blank, workspace);
+}
+
+template<typename T>
+void ctc_loss_gradient_into(std::span<const T> logits, size_t timesteps, size_t classes,
+                            std::span<const size_t> labels, std::span<T> grad_out,
+                            CTCWorkspace<T>& workspace, size_t blank = 0) {
+    ctc_forward<T>(logits, timesteps, classes, labels, blank, workspace);
+    ctc_backward_into<T>(workspace, grad_out);
+}
+
+template<typename T>
+std::vector<T> ctc_loss_gradient(std::span<const T> logits, size_t timesteps, size_t classes,
+                                 std::span<const size_t> labels, size_t blank = 0) {
+    std::vector<T> grad(logits.size());
+    CTCWorkspace<T> workspace;
+    ctc_loss_gradient_into<T>(logits, timesteps, classes, labels, grad, workspace, blank);
+    return grad;
+}
+
+namespace detail {
+
+template<typename T>
+void validate_masked(size_t logits_size, size_t token_count, size_t classes,
+                     std::span<const size_t> masked_positions, std::span<const size_t> masked_targets) {
+    if (!token_count || !classes || logits_size != token_count * classes
+        || masked_positions.empty() || masked_positions.size() != masked_targets.size())
+        throw std::invalid_argument("NexusLoss: MLM expects [token, class] logits and paired masked targets");
+    for (size_t i = 0; i < masked_positions.size(); ++i) {
+        if (masked_positions[i] >= token_count)
+            throw std::out_of_range("NexusLoss: masked token position is out of range");
+        if (masked_targets[i] >= classes)
+            throw std::out_of_range("NexusLoss: masked target class is out of range");
+    }
+}
+
+} // namespace detail
 
 template<typename T>
 T masked_language_model_loss(std::span<const T> token_logits, size_t token_count, size_t classes,
                              std::span<const size_t> masked_positions,
                              std::span<const size_t> masked_targets) {
-    if (!token_count || !classes || token_logits.size() != token_count * classes
-        || masked_positions.empty() || masked_positions.size() != masked_targets.size())
-        throw std::invalid_argument("NexusLoss: MLM expects [token, class] logits and paired masked targets");
+    detail::validate_masked<T>(token_logits.size(), token_count, classes, masked_positions, masked_targets);
     T sum = T(0);
     for (size_t i = 0; i < masked_positions.size(); ++i) {
-        if (masked_positions[i] >= token_count)
-            throw std::out_of_range("NexusLoss: masked token position is out of range");
         const auto row = token_logits.subspan(masked_positions[i] * classes, classes);
-        sum += classification::sparse_categorical_cross_entropy<T>(row, masked_targets[i]);
+        sum += core::log_sum_exp<T>(row) - row[masked_targets[i]];
     }
     return sum / static_cast<T>(masked_positions.size());
 }
@@ -88,104 +212,33 @@ T next_sentence_prediction_loss(T logit, T is_next) {
 }
 
 /**
- * @brief CTC kaybinin logitlere gore analitik turevi (Graves et al., 2006).
- *
- * Ileri-geri dinamik programlama log-uzayda alpha ve beta uretir. Bir (t, k)
- * icin posterior, o etiketi basan tum hizalama durumlarinin alpha*beta kutlesidir.
- * Loss -log Z oldugu icin dL/d logit = softmax(logit) - posterior.
- * Bos hedefte tek durum blank'tir.
+ * @brief Maskeli CE turevi, ayirmasiz. Ayni konum iki kez maskelenirse
+ *        forward iki terimi topladigi icin turev de toplanir.
  */
 template<typename T>
-std::vector<T> ctc_loss_gradient(std::span<const T> logits, size_t timesteps, size_t classes,
-                                 std::span<const size_t> labels, size_t blank = 0) {
-    if (!timesteps || !classes || logits.size() != timesteps * classes || blank >= classes)
-        throw std::invalid_argument("NexusLoss: CTC logits must be flattened time-major [time, class]");
-    if (labels.size() > timesteps) throw std::invalid_argument("NexusLoss: CTC target is longer than input");
-    for (size_t label : labels)
-        if (label >= classes || label == blank) throw std::invalid_argument("NexusLoss: invalid CTC target label");
-    const T negative_infinity = -std::numeric_limits<T>::infinity();
-    const size_t states = labels.size() * 2 + 1;
-    std::vector<size_t> extended(states, blank);
-    for (size_t i = 0; i < labels.size(); ++i) extended[i * 2 + 1] = labels[i];
-
-    std::vector<T> log_prob(timesteps * classes);
-    for (size_t time = 0; time < timesteps; ++time) {
-        T maximum = logits[time * classes];
-        for (size_t c = 1; c < classes; ++c) maximum = std::max(maximum, logits[time * classes + c]);
-        T sum = T(0);
-        for (size_t c = 0; c < classes; ++c) sum += std::exp(logits[time * classes + c] - maximum);
-        const T log_z = maximum + std::log(sum);
+void masked_language_model_gradient_into(std::span<const T> token_logits, size_t token_count, size_t classes,
+                                         std::span<const size_t> masked_positions,
+                                         std::span<const size_t> masked_targets, std::span<T> grad_out) {
+    detail::validate_masked<T>(token_logits.size(), token_count, classes, masked_positions, masked_targets);
+    if (grad_out.size() != token_logits.size())
+        throw std::invalid_argument("NexusLoss: MLM grad_out must match token logits");
+    std::fill(grad_out.begin(), grad_out.end(), T(0));
+    const T inv = T(1) / static_cast<T>(masked_positions.size());
+    for (size_t i = 0; i < masked_positions.size(); ++i) {
+        const size_t offset = masked_positions[i] * classes;
+        const auto row = token_logits.subspan(offset, classes);
+        const T log_z = core::log_sum_exp<T>(row);
         for (size_t c = 0; c < classes; ++c)
-            log_prob[time * classes + c] = logits[time * classes + c] - log_z;
+            grad_out[offset + c] += (std::exp(row[c] - log_z) - (c == masked_targets[i] ? T(1) : T(0))) * inv;
     }
-    const auto log_add = [negative_infinity](T a, T b) {
-        if (a == negative_infinity) return b;
-        if (b == negative_infinity) return a;
-        const T maximum = std::max(a, b);
-        return maximum + std::log1p(std::exp(std::min(a, b) - maximum));
-    };
-    std::vector<T> alpha(timesteps * states, negative_infinity), beta(timesteps * states, negative_infinity);
-    alpha[0] = log_prob[blank];
-    if (states > 1) alpha[1] = log_prob[extended[1]];
-    for (size_t time = 1; time < timesteps; ++time) {
-        for (size_t state = 0; state < states; ++state) {
-            T total = alpha[(time - 1) * states + state];
-            if (state > 0) total = log_add(total, alpha[(time - 1) * states + state - 1]);
-            if (state > 1 && extended[state] != blank && extended[state] != extended[state - 2])
-                total = log_add(total, alpha[(time - 1) * states + state - 2]);
-            alpha[time * states + state] = total + log_prob[time * classes + extended[state]];
-        }
-    }
-    beta[(timesteps - 1) * states + states - 1] = log_prob[(timesteps - 1) * classes + extended[states - 1]];
-    if (states > 1)
-        beta[(timesteps - 1) * states + states - 2] = log_prob[(timesteps - 1) * classes + extended[states - 2]];
-    for (size_t time = timesteps - 1; time-- > 0;) {
-        for (size_t state = 0; state < states; ++state) {
-            T total = beta[(time + 1) * states + state];
-            if (state + 1 < states) total = log_add(total, beta[(time + 1) * states + state + 1]);
-            if (state + 2 < states && extended[state + 2] != blank && extended[state + 2] != extended[state])
-                total = log_add(total, beta[(time + 1) * states + state + 2]);
-            beta[time * states + state] = log_prob[time * classes + extended[state]] + total;
-        }
-    }
-    const T log_likelihood = states == 1
-        ? alpha[(timesteps - 1) * states]
-        : log_add(alpha[(timesteps - 1) * states + states - 1], alpha[(timesteps - 1) * states + states - 2]);
-    std::vector<T> posterior(logits.size(), T(0));
-    for (size_t time = 0; time < timesteps; ++time)
-        for (size_t state = 0; state < states; ++state) {
-            const T emission = log_prob[time * classes + extended[state]];
-            const T occupancy = alpha[time * states + state] + beta[time * states + state] - emission - log_likelihood;
-            if (occupancy == negative_infinity) continue;
-            posterior[time * classes + extended[state]] += std::exp(occupancy);
-        }
-    std::vector<T> grad(logits.size());
-    for (size_t time = 0; time < timesteps; ++time)
-        for (size_t klass = 0; klass < classes; ++klass)
-            grad[time * classes + klass] = std::exp(log_prob[time * classes + klass]) - posterior[time * classes + klass];
-    return grad;
 }
 
 template<typename T>
 std::vector<T> masked_language_model_gradient(std::span<const T> token_logits, size_t token_count, size_t classes,
                                               std::span<const size_t> masked_positions,
                                               std::span<const size_t> masked_targets) {
-    if (!token_count || !classes || token_logits.size() != token_count * classes
-        || masked_positions.empty() || masked_positions.size() != masked_targets.size())
-        throw std::invalid_argument("NexusLoss: MLM expects [token, class] logits and paired masked targets");
-    std::vector<T> grad(token_logits.size(), T(0));
-    const T inv = T(1) / static_cast<T>(masked_positions.size());
-    for (size_t i = 0; i < masked_positions.size(); ++i) {
-        if (masked_positions[i] >= token_count)
-            throw std::out_of_range("NexusLoss: masked token position is out of range");
-        const auto row = token_logits.subspan(masked_positions[i] * classes, classes);
-        std::vector<T> one_hot(classes, T(0));
-        if (masked_targets[i] >= classes) throw std::out_of_range("NexusLoss: masked target class is out of range");
-        one_hot[masked_targets[i]] = T(1);
-        const auto local = classification::categorical_cross_entropy_gradient<T>(row, one_hot);
-        for (size_t c = 0; c < classes; ++c)
-            grad[masked_positions[i] * classes + c] = local[c] * inv;
-    }
+    std::vector<T> grad(token_logits.size());
+    masked_language_model_gradient_into<T>(token_logits, token_count, classes, masked_positions, masked_targets, grad);
     return grad;
 }
 
@@ -196,28 +249,37 @@ std::vector<T> masked_language_model_gradient(std::span<const T> token_logits, s
  * Graves, Fernandez, Gomez, Schmidhuber, Connectionist Temporal Classification, 2006.
  * Logitler zaman-major duz vektordur: index = time * classes + class.
  * Hedef, blank sinifini icermeyen etiket dizisidir.
+ *
+ * `zero_infinity` acikken hizalanamayan hedef (Z = 0) +inf yerine 0 kayip ve
+ * 0 turev uretir; boylece tek bir bozuk ornek tum batch'i NaN yapmaz.
  */
 template<typename T>
 class CTCLoss {
 public:
+    explicit CTCLoss(bool zero_infinity = true) : zero_infinity_(zero_infinity) {}
+
     T forward(std::span<const T> logits, size_t timesteps, size_t classes,
               std::span<const size_t> labels, size_t blank = 0) {
-        logits_.assign(logits.begin(), logits.end());
-        labels_.assign(labels.begin(), labels.end());
-        timesteps_ = timesteps;
-        classes_ = classes;
-        blank_ = blank;
+        const T loss = ctc_forward<T>(logits, timesteps, classes, labels, blank, workspace_);
+        workspace_.beta.reserve(timesteps * workspace_.states);
         ready_ = true;
-        return ctc_loss(logits, timesteps, classes, labels, blank);
+        if (zero_infinity_ && !std::isfinite(loss)) return T(0);
+        return loss;
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return workspace_.timesteps * workspace_.classes; }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    /// @note `beta` tablosu nesnenin icinde tutulur; ayni nesneye es zamanli backward cagrilmaz.
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return ctc_loss_gradient<T>(logits_, timesteps_, classes_, labels_, blank_);
+        ctc_backward_into<T>(workspace_, grad_out);
     }
 private:
-    std::vector<T> logits_;
-    std::vector<size_t> labels_;
-    size_t timesteps_ = 0, classes_ = 0, blank_ = 0;
+    mutable CTCWorkspace<T> workspace_;
+    bool zero_infinity_;
     bool ready_ = false;
 };
 
@@ -238,9 +300,15 @@ public:
         ready_ = true;
         return masked_language_model_loss(token_logits, token_count, classes, masked_positions, masked_targets);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return logits_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return masked_language_model_gradient<T>(logits_, tokens_, classes_, positions_, targets_);
+        masked_language_model_gradient_into<T>(logits_, tokens_, classes_, positions_, targets_, grad_out);
     }
 private:
     std::vector<T> logits_;

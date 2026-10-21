@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NexusLoss — Loss functions, engineered",
-  description: "C++20 header-only loss library documentation and benchmarks.",
+  title: "NexusLoss — Analytic loss and gradients",
+  description: "C++20 loss library. Nexus calls CrossEntropy and MSE; both write the gradient into the caller buffer and return the mean.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

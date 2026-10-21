@@ -18,6 +18,7 @@
 #ifndef NEXUSLOSS_LOSS_BASE_HPP
 #define NEXUSLOSS_LOSS_BASE_HPP
 
+#include <atomic>
 #include <vector>
 #include <span>
 #include <stdexcept>
@@ -25,6 +26,15 @@
 #include "../core/utils.hpp"
 
 namespace nexusloss {
+
+    namespace core {
+        /// `gradient_element_wise_into` varsayilan yolu gecici vektor ayirdiginda artar.
+        /// Alt sinif dogrudan yazarsa bu sayac yerinde kalir. Test sifir bekler.
+        inline std::atomic<std::uint64_t>& inplace_fallback_allocations() {
+            static std::atomic<std::uint64_t> count{0};
+            return count;
+        }
+    }
 
     /**
      * @brief Tüm loss fonksiyonları için temel soyut sınıf.
@@ -155,6 +165,29 @@ namespace nexusloss {
         }
 
         /**
+         * @brief Eleman turevini `grad_out` icine yazar. Ayirma yapmaz.
+         *
+         * Reduction bu metoda girmez. Mean/Sum olcegi `gradient_into` ve
+         * `backward_into` icinde, ayni tamponun uzerinde uygulanir.
+         * Varsayilan uygulama `gradient_element_wise` cagirir ve bu yuzden
+         * gecici vektor ayirir; sicak yol bunu override eder.
+         */
+        virtual void gradient_element_wise_into(
+            std::span<const T> pred,
+            std::span<const T> target,
+            std::span<T> grad_out
+        ) const {
+            core::inplace_fallback_allocations().fetch_add(1, std::memory_order_relaxed);
+            const std::vector<T> temporary = gradient_element_wise(pred, target);
+            if (temporary.size() != grad_out.size()) {
+                throw std::logic_error("NexusLoss: gradyan uzunlugu tahmin ile ayni olmali");
+            }
+            for (size_t i = 0; i < temporary.size(); ++i) {
+                grad_out[i] = temporary[i];
+            }
+        }
+
+        /**
          * @brief Skaler (veya None icin eleman bazli) loss'un dL/d(pred) gradyani.
          *
          * Mean / BatchMean: her eleman `1/N` ile olceklenir, cunku skaler loss ortalamadir.
@@ -164,15 +197,38 @@ namespace nexusloss {
          * @warning forward() cagirmak zorunda degildir. Girdileri dogrudan alir.
          *          forward/backward cifti icin asagidaki `backward()` metoduna bak.
          */
+        /// @brief dL/d(pred) degerini `grad_out` icine yazar. Yeni vektor ayirmaz.
+        void gradient_into(
+            std::span<const T> pred,
+            std::span<const T> target,
+            std::span<T> grad_out
+        ) const {
+            core::check_same_size(pred, target);
+            require_gradient_span(pred, grad_out);
+            gradient_element_wise_into(pred, target, grad_out);
+            scale_gradient(grad_out, /*weight*/ {});
+        }
+
+        /// @brief Agirlikli `gradient_into`. Mean'de payda agirlik toplami, Sum/None'da w_i carpanidir.
+        void gradient_into(
+            std::span<const T> pred,
+            std::span<const T> target,
+            std::span<const T> weights,
+            std::span<T> grad_out
+        ) const {
+            core::check_same_size(pred, target, weights);
+            require_gradient_span(pred, grad_out);
+            gradient_element_wise_into(pred, target, grad_out);
+            scale_gradient(grad_out, weights);
+        }
+
         std::vector<T> gradient(
             std::span<const T> pred,
             std::span<const T> target
         ) const {
             core::check_same_size(pred, target);
-            std::vector<T> grad = gradient_element_wise(pred, target);
-            if (grad.size() != pred.size()) {
-                throw std::logic_error("NexusLoss: gradyan uzunlugu tahmin ile ayni olmali");
-            }
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             scale_gradient(grad, /*weight*/ {});
             return grad;
         }
@@ -184,10 +240,8 @@ namespace nexusloss {
             std::span<const T> weights
         ) const {
             core::check_same_size(pred, target, weights);
-            std::vector<T> grad = gradient_element_wise(pred, target);
-            if (grad.size() != pred.size()) {
-                throw std::logic_error("NexusLoss: gradyan uzunlugu tahmin ile ayni olmali");
-            }
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             scale_gradient(grad, weights);
             return grad;
         }
@@ -212,6 +266,9 @@ namespace nexusloss {
             return compute(pred, target, weights);
         }
 
+        /// @brief Son forward()'un tahmin uzunlugu; `backward_into` tamponu bu boyutta olmalidir.
+        [[nodiscard]] size_t gradient_size() const noexcept { return cached_prediction_.size(); }
+
         /**
          * @brief Son forward()'un girdilerine gore dL/d(prediction).
          * @warning forward() cagrilmadan backward() tanimsizdir; burada bilinçli hata atilir.
@@ -220,10 +277,38 @@ namespace nexusloss {
             if (!forward_called_) {
                 throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
             }
-            if (has_weights_) {
-                return gradient(cached_prediction_, cached_target_, cached_weights_);
+            std::vector<T> grad(cached_prediction_.size());
+            backward_into(grad);
+            return grad;
+        }
+
+        /**
+         * @brief Son forward'un turevini `grad_out` icine yazar.
+         *
+         * Basarili cagri yigin disinda bellek ayirmaz: eleman turevi dogrudan
+         * cagiranin span'ine yazilir, Mean/Sum olcegi ayni bellege uygulanir.
+         * `grad_out` uzunlugu saklanan tahmin ile ayni olmalidir.
+         */
+        void backward_into(std::span<T> grad_out) const {
+            if (!forward_called_) {
+                throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
             }
-            return gradient(cached_prediction_, cached_target_);
+            if (grad_out.size() != cached_prediction_.size()) {
+                throw std::invalid_argument("NexusLoss: grad_out boyutu pred ile ayni olmali");
+            }
+            gradient_element_wise_into(cached_prediction_, cached_target_, grad_out);
+            if (has_weights_) {
+                scale_gradient(grad_out, cached_weights_);
+            } else {
+                scale_gradient(grad_out, {});
+            }
+        }
+
+    protected:
+        void require_gradient_span(std::span<const T> pred, std::span<T> grad_out) const {
+            if (grad_out.size() != pred.size()) {
+                throw std::invalid_argument("NexusLoss: grad_out boyutu pred ile ayni olmali");
+            }
         }
 
     private:
@@ -235,7 +320,7 @@ namespace nexusloss {
             forward_called_ = true;
         }
 
-        void scale_gradient(std::vector<T>& grad, std::span<const T> weights) const {
+        void scale_gradient(std::span<T> grad, std::span<const T> weights) const {
             const bool weighted = !weights.empty();
             if (reduction_ == core::ReductionType::None || reduction_ == core::ReductionType::Sum) {
                 if (weighted) {

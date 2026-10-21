@@ -1,4 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
+
+# Ayni yapida ikinci kez add_subdirectory edilirse hedefler yeniden tanimlanmaz.
+if(TARGET nexusloss)
+    return()
+endif()
+
 project(nexusloss VERSION 0.1.0 LANGUAGES CXX)
 
 # C++20 kullan
@@ -6,21 +12,24 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Kütüphanenin kendisi (header-only)
-# INTERFACE değerlenecek cpp dosyası yok demek yani header only bir kütüphane anlamına geliyor
-add_library(nexusloss INTERFACE)
+# Kütüphane: basliklar ve AVX2 tek-gecis kayip cekirdegi.
+add_library(nexusloss STATIC src/fused_simd.cpp)
 add_library(nexusloss::nexusloss ALIAS nexusloss)
 
-target_include_directories(nexusloss INTERFACE
+target_include_directories(nexusloss PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
-target_compile_features(nexusloss INTERFACE cxx_std_20)
+target_compile_features(nexusloss PUBLIC cxx_std_20)
 
 if(MSVC)
+    target_compile_options(nexusloss PRIVATE /W4 /EHsc /utf-8)
     target_compile_options(nexusloss INTERFACE /W4 /utf-8)
+    set_source_files_properties(src/fused_simd.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
 else()
+    target_compile_options(nexusloss PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(nexusloss INTERFACE -Wall -Wextra -Wpedantic)
+    set_source_files_properties(src/fused_simd.cpp PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma")
 endif()
 
 # Aç/kapa seçenekleri

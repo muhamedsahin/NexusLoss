@@ -11,7 +11,9 @@
 #ifndef NEXUSLOSS_GENERATIVE_HPP
 #define NEXUSLOSS_GENERATIVE_HPP
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <span>
 #include <stdexcept>
 #include <vector>
@@ -161,75 +163,183 @@ T adversarial_generator_loss(std::span<const T> fake_logits) {
     return sum / static_cast<T>(fake_logits.size());
 }
 
+namespace detail {
+
+template<typename T>
+void require_pair_scores(std::span<const T> real, std::span<const T> fake, std::span<T> grad_out) {
+    if (real.empty() || fake.empty())
+        throw std::invalid_argument("NexusLoss: GAN score inputs cannot be empty");
+    if (grad_out.size() != real.size() + fake.size())
+        throw std::invalid_argument("NexusLoss: discriminator grad_out must hold [real | fake]");
+}
+
+template<typename T>
+void require_scores(std::span<const T> scores, std::span<T> grad_out) {
+    if (scores.empty()) throw std::invalid_argument("NexusLoss: loss input cannot be empty");
+    if (grad_out.size() != scores.size()) throw std::invalid_argument("NexusLoss: grad_out must match scores");
+}
+
+} // namespace detail
+
+/// @brief Vanilla GAN ayirtici turevi. grad_out = [gercek | sahte] logitleri, ayirmasiz.
+template<typename T>
+void adversarial_discriminator_gradient_into(std::span<const T> real_logits, std::span<const T> fake_logits,
+                                             std::span<T> grad_out) {
+    detail::require_pair_scores(real_logits, fake_logits, grad_out);
+    const T inv = T(1) / static_cast<T>(grad_out.size());
+    for (size_t i = 0; i < real_logits.size(); ++i)
+        grad_out[i] = (core::stable_sigmoid(real_logits[i]) - T(1)) * inv;
+    for (size_t i = 0; i < fake_logits.size(); ++i)
+        grad_out[real_logits.size() + i] = core::stable_sigmoid(fake_logits[i]) * inv;
+}
+
 template<typename T>
 std::vector<T> adversarial_discriminator_gradient(std::span<const T> real_logits, std::span<const T> fake_logits) {
-    if (real_logits.empty() || fake_logits.empty())
-        throw std::invalid_argument("NexusLoss: GAN score inputs cannot be empty");
     std::vector<T> grad(real_logits.size() + fake_logits.size());
-    const T inv = T(1) / static_cast<T>(grad.size());
-    for (size_t i = 0; i < real_logits.size(); ++i)
-        grad[i] = (core::stable_sigmoid(real_logits[i]) - T(1)) * inv;
-    for (size_t i = 0; i < fake_logits.size(); ++i)
-        grad[real_logits.size() + i] = core::stable_sigmoid(fake_logits[i]) * inv;
+    adversarial_discriminator_gradient_into<T>(real_logits, fake_logits, grad);
     return grad;
+}
+
+template<typename T>
+void adversarial_generator_gradient_into(std::span<const T> fake_logits, std::span<T> grad_out) {
+    detail::require_scores(fake_logits, grad_out);
+    const T inv = T(1) / static_cast<T>(grad_out.size());
+    for (size_t i = 0; i < fake_logits.size(); ++i)
+        grad_out[i] = -core::stable_sigmoid(fake_logits[i]) * inv;
 }
 
 template<typename T>
 std::vector<T> adversarial_generator_gradient(std::span<const T> fake_logits) {
-    if (fake_logits.empty()) throw std::invalid_argument("NexusLoss: loss input cannot be empty");
     std::vector<T> grad(fake_logits.size());
-    const T inv = T(1) / static_cast<T>(grad.size());
-    for (size_t i = 0; i < fake_logits.size(); ++i)
-        grad[i] = -core::stable_sigmoid(fake_logits[i]) * inv;
+    adversarial_generator_gradient_into<T>(fake_logits, grad);
     return grad;
+}
+
+/**
+ * @brief Doymayan uretici kaybi -log D(G(z)) (Goodfellow et al., 2014, bol. 3).
+ * Minimax formun aksine ayirtici kazanirken de gradyan sonmez.
+ */
+template<typename T>
+T non_saturating_generator_loss(std::span<const T> fake_logits) {
+    if (fake_logits.empty()) throw std::invalid_argument("NexusLoss: loss input cannot be empty");
+    T sum = T(0);
+    for (T logit : fake_logits) sum += std::max(logit, T(0)) - logit + std::log1p(std::exp(-std::abs(logit)));
+    return sum / static_cast<T>(fake_logits.size());
+}
+
+template<typename T>
+void non_saturating_generator_gradient_into(std::span<const T> fake_logits, std::span<T> grad_out) {
+    detail::require_scores(fake_logits, grad_out);
+    const T inv = T(1) / static_cast<T>(grad_out.size());
+    for (size_t i = 0; i < fake_logits.size(); ++i)
+        grad_out[i] = (core::stable_sigmoid(fake_logits[i]) - T(1)) * inv;
+}
+
+template<typename T>
+void wasserstein_discriminator_gradient_into(std::span<const T> real_scores, std::span<const T> fake_scores,
+                                             std::span<T> grad_out) {
+    detail::require_pair_scores(real_scores, fake_scores, grad_out);
+    const T real_value = T(-1) / static_cast<T>(real_scores.size());
+    const T fake_value = T(1) / static_cast<T>(fake_scores.size());
+    std::fill(grad_out.begin(), grad_out.begin() + static_cast<std::ptrdiff_t>(real_scores.size()), real_value);
+    std::fill(grad_out.begin() + static_cast<std::ptrdiff_t>(real_scores.size()), grad_out.end(), fake_value);
 }
 
 template<typename T>
 std::vector<T> wasserstein_discriminator_gradient(std::span<const T> real_scores, std::span<const T> fake_scores) {
-    if (real_scores.empty() || fake_scores.empty())
-        throw std::invalid_argument("NexusLoss: loss input cannot be empty");
     std::vector<T> grad(real_scores.size() + fake_scores.size());
-    for (size_t i = 0; i < real_scores.size(); ++i) grad[i] = T(-1) / static_cast<T>(real_scores.size());
-    for (size_t i = 0; i < fake_scores.size(); ++i)
-        grad[real_scores.size() + i] = T(1) / static_cast<T>(fake_scores.size());
+    wasserstein_discriminator_gradient_into<T>(real_scores, fake_scores, grad);
     return grad;
 }
 
 template<typename T>
-std::vector<T> least_squares_gradient(std::span<const T> scores, T target) {
-    if (scores.empty()) throw std::invalid_argument("NexusLoss: loss input cannot be empty");
-    std::vector<T> grad(scores.size());
+void wasserstein_generator_gradient_into(std::span<const T> fake_scores, std::span<T> grad_out) {
+    detail::require_scores(fake_scores, grad_out);
+    std::fill(grad_out.begin(), grad_out.end(), T(-1) / static_cast<T>(fake_scores.size()));
+}
+
+/// @brief Hinge GAN ayirtici turevi: gercek icin -1[1-s>0], sahte icin +1[1+s>0], ortalama.
+template<typename T>
+void hinge_discriminator_gradient_into(std::span<const T> real_scores, std::span<const T> fake_scores,
+                                       std::span<T> grad_out) {
+    detail::require_pair_scores(real_scores, fake_scores, grad_out);
+    const T inv = T(1) / static_cast<T>(grad_out.size());
+    for (size_t i = 0; i < real_scores.size(); ++i)
+        grad_out[i] = T(1) - real_scores[i] > T(0) ? -inv : T(0);
+    for (size_t i = 0; i < fake_scores.size(); ++i)
+        grad_out[real_scores.size() + i] = T(1) + fake_scores[i] > T(0) ? inv : T(0);
+}
+
+template<typename T>
+void least_squares_gradient_into(std::span<const T> scores, T target, std::span<T> grad_out) {
+    detail::require_scores(scores, grad_out);
     const T scale = T(2) / static_cast<T>(scores.size());
-    for (size_t i = 0; i < scores.size(); ++i) grad[i] = scale * (scores[i] - target);
+    for (size_t i = 0; i < scores.size(); ++i) grad_out[i] = scale * (scores[i] - target);
+}
+
+template<typename T>
+std::vector<T> least_squares_gradient(std::span<const T> scores, T target) {
+    std::vector<T> grad(scores.size());
+    least_squares_gradient_into<T>(scores, target, grad);
     return grad;
 }
 
 /// @brief ELBO'nun [ortalama | log-varyans] turevi. Rekonstruksiyon terimi ayri loss'tan gelir.
 template<typename T>
-std::vector<T> elbo_gradient(std::span<const T> mean, std::span<const T> log_variance, T beta = T(1)) {
+void elbo_gradient_into(std::span<const T> mean, std::span<const T> log_variance, std::span<T> grad_out,
+                        T beta = T(1)) {
     if (mean.empty() || mean.size() != log_variance.size() || beta < T(0))
         throw std::invalid_argument("NexusLoss: invalid VAE parameters");
-    std::vector<T> grad(mean.size() * 2);
+    if (grad_out.size() != mean.size() * 2)
+        throw std::invalid_argument("NexusLoss: ELBO grad_out must hold [mean | log_variance]");
     for (size_t i = 0; i < mean.size(); ++i) {
-        grad[i] = beta * mean[i];
-        grad[mean.size() + i] = beta * T(-0.5) * (T(1) - std::exp(log_variance[i]));
+        grad_out[i] = beta * mean[i];
+        grad_out[mean.size() + i] = beta * T(-0.5) * (T(1) - std::exp(log_variance[i]));
     }
-    return grad;
 }
 
 template<typename T>
+std::vector<T> elbo_gradient(std::span<const T> mean, std::span<const T> log_variance, T beta = T(1)) {
+    std::vector<T> grad(mean.size() * 2);
+    elbo_gradient_into<T>(mean, log_variance, grad, beta);
+    return grad;
+}
+
+/**
+ * @class AdversarialLoss
+ * @brief Vanilla GAN. `non_saturating` acikken uretici -log D(G(z)) kullanir.
+ * Durumsuzdur: girdiler her cagrida acikca verilir, `*_backward_into` ayirmaz.
+ */
+template<typename T>
 class AdversarialLoss {
 public:
+    explicit AdversarialLoss(bool non_saturating = false) : non_saturating_(non_saturating) {}
     T discriminator(std::span<const T> real_logits, std::span<const T> fake_logits) {
         return adversarial_discriminator_loss(real_logits, fake_logits);
     }
     std::vector<T> discriminator_backward(std::span<const T> real_logits, std::span<const T> fake_logits) const {
-        return adversarial_discriminator_gradient<T>(real_logits, fake_logits);
+        std::vector<T> grad(real_logits.size() + fake_logits.size());
+        discriminator_backward_into(real_logits, fake_logits, grad);
+        return grad;
     }
-    T generator(std::span<const T> fake_logits) { return adversarial_generator_loss(fake_logits); }
+    void discriminator_backward_into(std::span<const T> real_logits, std::span<const T> fake_logits,
+                                     std::span<T> grad_out) const {
+        adversarial_discriminator_gradient_into<T>(real_logits, fake_logits, grad_out);
+    }
+    T generator(std::span<const T> fake_logits) {
+        return non_saturating_ ? non_saturating_generator_loss(fake_logits) : adversarial_generator_loss(fake_logits);
+    }
     std::vector<T> generator_backward(std::span<const T> fake_logits) const {
-        return adversarial_generator_gradient<T>(fake_logits);
+        std::vector<T> grad(fake_logits.size());
+        generator_backward_into(fake_logits, grad);
+        return grad;
     }
+    void generator_backward_into(std::span<const T> fake_logits, std::span<T> grad_out) const {
+        if (non_saturating_) non_saturating_generator_gradient_into<T>(fake_logits, grad_out);
+        else adversarial_generator_gradient_into<T>(fake_logits, grad_out);
+    }
+private:
+    bool non_saturating_;
 };
 
 template<typename T>
@@ -241,7 +351,36 @@ public:
     std::vector<T> discriminator_backward(std::span<const T> real_scores, std::span<const T> fake_scores) const {
         return wasserstein_discriminator_gradient<T>(real_scores, fake_scores);
     }
+    void discriminator_backward_into(std::span<const T> real_scores, std::span<const T> fake_scores,
+                                     std::span<T> grad_out) const {
+        wasserstein_discriminator_gradient_into<T>(real_scores, fake_scores, grad_out);
+    }
     T generator(std::span<const T> fake_scores) { return wasserstein_generator_loss(fake_scores); }
+    std::vector<T> generator_backward(std::span<const T> fake_scores) const {
+        std::vector<T> grad(fake_scores.size());
+        generator_backward_into(fake_scores, grad);
+        return grad;
+    }
+    void generator_backward_into(std::span<const T> fake_scores, std::span<T> grad_out) const {
+        wasserstein_generator_gradient_into<T>(fake_scores, grad_out);
+    }
+};
+
+/// @brief Hinge GAN (Miyato et al., SN-GAN 2018). Uretici terimi -mean(D(G(z))) WGAN ile aynidir.
+template<typename T>
+class HingeGANLoss {
+public:
+    T discriminator(std::span<const T> real_scores, std::span<const T> fake_scores) {
+        return hinge_discriminator_loss(real_scores, fake_scores);
+    }
+    void discriminator_backward_into(std::span<const T> real_scores, std::span<const T> fake_scores,
+                                     std::span<T> grad_out) const {
+        hinge_discriminator_gradient_into<T>(real_scores, fake_scores, grad_out);
+    }
+    T generator(std::span<const T> fake_scores) { return hinge_generator_loss(fake_scores); }
+    void generator_backward_into(std::span<const T> fake_scores, std::span<T> grad_out) const {
+        wasserstein_generator_gradient_into<T>(fake_scores, grad_out);
+    }
 };
 
 template<typename T>
@@ -250,6 +389,9 @@ public:
     T forward(std::span<const T> scores, T target) { return least_squares_gan_loss(scores, target); }
     std::vector<T> backward(std::span<const T> scores, T target) const {
         return least_squares_gradient<T>(scores, target);
+    }
+    void backward_into(std::span<const T> scores, T target, std::span<T> grad_out) const {
+        least_squares_gradient_into<T>(scores, target, grad_out);
     }
 };
 
@@ -263,9 +405,15 @@ public:
         ready_ = true;
         return elbo_loss(reconstruction, mean, log_variance, beta_);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return mean_.size() * 2; }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return elbo_gradient<T>(mean_, log_variance_, beta_);
+        elbo_gradient_into<T>(mean_, log_variance_, grad_out, beta_);
     }
 private:
     T beta_;

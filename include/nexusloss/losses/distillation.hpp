@@ -57,36 +57,47 @@ T feature_distillation_loss(std::span<const T> student_features, std::span<const
     return sum / static_cast<T>(student_features.size());
 }
 
-/// @brief dL/d(student logit) = T * (softmax(z_s/T) - softmax(z_t/T)). Hinton et al., 2015.
+/**
+ * @brief dL/d(student logit) = T * (softmax(z_s/T) - softmax(z_t/T)). Hinton et al., 2015.
+ * `teacher_scratch` ogretmen dagilimi icin cagiranin tamponudur.
+ */
+template<typename T>
+void kl_divergence_gradient_into(std::span<const T> student_logits, std::span<const T> teacher_logits,
+                                 std::span<T> grad_out, std::span<T> teacher_scratch, T temperature = T(1)) {
+    if (student_logits.empty() || student_logits.size() != teacher_logits.size() || temperature <= T(0))
+        throw std::invalid_argument("NexusLoss: KL inputs must have equal size and positive temperature");
+    if (grad_out.size() != student_logits.size() || teacher_scratch.size() != student_logits.size())
+        throw std::invalid_argument("NexusLoss: distillation buffers must match the logits");
+    core::softmax_into<T>(student_logits, grad_out, temperature);
+    core::softmax_into<T>(teacher_logits, teacher_scratch, temperature);
+    for (size_t i = 0; i < grad_out.size(); ++i) grad_out[i] = temperature * (grad_out[i] - teacher_scratch[i]);
+}
+
 template<typename T>
 std::vector<T> kl_divergence_gradient(std::span<const T> student_logits, std::span<const T> teacher_logits,
                                       T temperature = T(1)) {
-    if (student_logits.empty() || student_logits.size() != teacher_logits.size() || temperature <= T(0))
-        throw std::invalid_argument("NexusLoss: KL inputs must have equal size and positive temperature");
-    const auto probabilities = [temperature](std::span<const T> values) {
-        const T maximum = *std::max_element(values.begin(), values.end()) / temperature;
-        std::vector<T> result(values.size());
-        T sum = T(0);
-        for (size_t i = 0; i < values.size(); ++i) sum += result[i] = std::exp(values[i] / temperature - maximum);
-        for (T& value : result) value /= sum;
-        return result;
-    };
-    const auto student = probabilities(student_logits);
-    const auto teacher = probabilities(teacher_logits);
-    std::vector<T> grad(student.size());
-    for (size_t i = 0; i < student.size(); ++i) grad[i] = temperature * (student[i] - teacher[i]);
+    std::vector<T> grad(student_logits.size()), scratch(student_logits.size());
+    kl_divergence_gradient_into<T>(student_logits, teacher_logits, grad, scratch, temperature);
     return grad;
+}
+
+template<typename T>
+void feature_distillation_gradient_into(std::span<const T> student_features, std::span<const T> teacher_features,
+                                        std::span<T> grad_out) {
+    if (student_features.empty() || student_features.size() != teacher_features.size())
+        throw std::invalid_argument("NexusLoss: distillation features must have equal non-zero sizes");
+    if (grad_out.size() != student_features.size())
+        throw std::invalid_argument("NexusLoss: distillation grad_out must match the features");
+    const T scale = T(2) / static_cast<T>(student_features.size());
+    for (size_t i = 0; i < student_features.size(); ++i)
+        grad_out[i] = scale * (student_features[i] - teacher_features[i]);
 }
 
 template<typename T>
 std::vector<T> feature_distillation_gradient(std::span<const T> student_features,
                                              std::span<const T> teacher_features) {
-    if (student_features.empty() || student_features.size() != teacher_features.size())
-        throw std::invalid_argument("NexusLoss: distillation features must have equal non-zero sizes");
     std::vector<T> grad(student_features.size());
-    const T scale = T(2) / static_cast<T>(student_features.size());
-    for (size_t i = 0; i < student_features.size(); ++i)
-        grad[i] = scale * (student_features[i] - teacher_features[i]);
+    feature_distillation_gradient_into<T>(student_features, teacher_features, grad);
     return grad;
 }
 
@@ -113,25 +124,39 @@ T attention_transfer_loss(std::span<const T> student, std::span<const T> teacher
     return T(0.5) * loss;
 }
 
+/**
+ * @brief Attention transfer turevi, iki gecis, ayirmasiz.
+ * d = s/|s| - t/|t|, grad = (d - (s/|s|) <s/|s|, d>) / |s|. Yon vektoru saklanmaz.
+ */
 template<typename T>
-std::vector<T> attention_transfer_gradient(std::span<const T> student, std::span<const T> teacher) {
+void attention_transfer_gradient_into(std::span<const T> student, std::span<const T> teacher, std::span<T> grad_out) {
     if (student.empty() || student.size() != teacher.size())
         throw std::invalid_argument("NexusLoss: attention maps must have equal non-zero sizes");
-    T sum = T(0);
-    for (T value : student) sum += value * value;
-    const T student_norm = std::sqrt(std::max(sum, core::epsilon<T>));
-    T teacher_sum = T(0);
-    for (T value : teacher) teacher_sum += value * value;
-    const T teacher_norm = std::sqrt(std::max(teacher_sum, core::epsilon<T>));
-    std::vector<T> direction(student.size());
+    if (grad_out.size() != student.size())
+        throw std::invalid_argument("NexusLoss: attention grad_out must match the student map");
+    T sum = T(0), teacher_sum = T(0);
+    for (size_t i = 0; i < student.size(); ++i) {
+        sum += student[i] * student[i];
+        teacher_sum += teacher[i] * teacher[i];
+    }
+    const T inverse_student = T(1) / std::sqrt(std::max(sum, core::epsilon<T>));
+    const T inverse_teacher = T(1) / std::sqrt(std::max(teacher_sum, core::epsilon<T>));
     T projection = T(0);
     for (size_t i = 0; i < student.size(); ++i) {
-        direction[i] = student[i] / student_norm - teacher[i] / teacher_norm;
-        projection += (student[i] / student_norm) * direction[i];
+        const T unit = student[i] * inverse_student;
+        projection += unit * (unit - teacher[i] * inverse_teacher);
     }
+    for (size_t i = 0; i < student.size(); ++i) {
+        const T unit = student[i] * inverse_student;
+        const T direction = unit - teacher[i] * inverse_teacher;
+        grad_out[i] = (direction - unit * projection) * inverse_student;
+    }
+}
+
+template<typename T>
+std::vector<T> attention_transfer_gradient(std::span<const T> student, std::span<const T> teacher) {
     std::vector<T> grad(student.size());
-    for (size_t i = 0; i < student.size(); ++i)
-        grad[i] = (direction[i] - (student[i] / student_norm) * projection) / student_norm;
+    attention_transfer_gradient_into<T>(student, teacher, grad);
     return grad;
 }
 
@@ -146,16 +171,25 @@ public:
     T forward(std::span<const T> student_logits, std::span<const T> teacher_logits) {
         student_.assign(student_logits.begin(), student_logits.end());
         teacher_.assign(teacher_logits.begin(), teacher_logits.end());
+        scratch_.resize(student_logits.size());
         ready_ = true;
         return kl_divergence(student_logits, teacher_logits, temperature_);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return student_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    /// @note Ogretmen dagilimi `scratch_` icine yazilir; ayni nesneye es zamanli backward cagrilmaz.
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return kl_divergence_gradient<T>(student_, teacher_, temperature_);
+        kl_divergence_gradient_into<T>(student_, teacher_, grad_out, scratch_, temperature_);
     }
 private:
     T temperature_;
     std::vector<T> student_, teacher_;
+    mutable std::vector<T> scratch_;
     bool ready_ = false;
 };
 
@@ -168,9 +202,15 @@ public:
         ready_ = true;
         return feature_distillation_loss(student, teacher);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return student_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return feature_distillation_gradient<T>(student_, teacher_);
+        feature_distillation_gradient_into<T>(student_, teacher_, grad_out);
     }
 private:
     std::vector<T> student_, teacher_;
@@ -186,9 +226,15 @@ public:
         ready_ = true;
         return attention_transfer_loss(student, teacher);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return student_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return attention_transfer_gradient<T>(student_, teacher_);
+        attention_transfer_gradient_into<T>(student_, teacher_, grad_out);
     }
 private:
     std::vector<T> student_, teacher_;

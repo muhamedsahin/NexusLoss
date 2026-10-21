@@ -738,9 +738,17 @@ h2 i {
   border-top: 1px solid var(--line);
   padding: 30px 0;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 12px 24px;
   color: var(--muted);
   font: 10px var(--mono)
+}
+
+.footer-attrib {
+  flex: 1 0 100%;
+  margin: 0;
+  line-height: 1.55
 }
 
 .loader {

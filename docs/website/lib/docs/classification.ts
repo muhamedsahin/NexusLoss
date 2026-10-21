@@ -5,8 +5,8 @@ export const classification: CategoryDoc = {
   index: "02",
   title: bi("Classification", "Sınıflandırma"),
   lede: bi(
-    "Binary losses that live on LossBase take a vector of scores and targets in lockstep. Multi-class losses live in nexusloss::classification and consume one sample of logits plus a class index. Loop the batch yourself, then reduce.",
-    "LossBase üzerindeki ikili kayıplar skor ve hedef vektörlerini eleman eleman alır. Çok sınıflı kayıplar nexusloss::classification içindedir; bir örneğin logitlerini ve sınıf indeksini tüketir. Batch'i sen döngüye al, sonra indirge.",
+    "Nexus does not loop this page by hand. nexus::loss::CrossEntropy(label_smoothing).forward_backward(logits, targets, batch, classes, grad) walks each row, returns the mean, and divides the gradient by batch. The classes below are what that call uses, plus the binary losses that stay on LossBase.",
+    "Nexus bu sayfayı elle döngüye almaz. nexus::loss::CrossEntropy(label_smoothing).forward_backward(logits, targets, batch, classes, grad) her satırı gezer, ortalamayı döndürür ve gradyanı batch'e böler. Alttaki sınıflar o çağrının kullandığı tipler ve LossBase üzerinde kalan ikili kayıplardır.",
   ),
   losses: [
     {
@@ -67,27 +67,33 @@ auto gradient = loss.backward();`,
     {
       id: "cross-entropy",
       name: "Cross-entropy",
-      api: "classification::CrossEntropyLoss<T>",
-      formula: "L = log Σ exp(z) − z_c",
-      kind: bi("One sample · logits", "Tek örnek · logit"),
+      api: "nexus::loss::CrossEntropy · classification::CrossEntropyLoss<T>",
+      formula: "L = mean_i (log Σ exp(z_i) − z_i,c)",
+      kind: bi("Batch facade · one-row class", "Batch cephesi · tek satır sınıfı"),
       when: bi(
-        "Mutually exclusive classes: one image, one digit, one intent. The vector is logits for a single example and the target is a class index. For a batch, call it once per row and average.",
-        "Birbirini dışlayan sınıflar: bir görüntü, bir rakam, bir niyet. Vektör tek örneğin logitleridir, hedef sınıf indeksidir. Batch için satır satır çağır ve ortala.",
+        "Use the facade for a batch of mutually exclusive classes. Logits are row-major, length batch × classes, and targets are class indices. The one-row class is what the facade calls per row; it does not divide by batch.",
+        "Birbirini dışlayan sınıfların batch'i için cepheyi kullan. Logitler satır-major'dur, uzunluk batch × classes'tır, hedefler sınıf indeksleridir. Tek satır sınıfı cephenin her satırda çağırdığı tiptir; batch'e bölmez.",
       ),
       logic: bi(
         "Softmax turns logits into a distribution; negative log-likelihood then charges the model for the probability it assigned to the true class. NexusLoss never builds the softmax explicitly in the forward value: log-sum-exp subtracts the max logit first, so exp(1000) becomes exp(0). Label smoothing is an optional constructor argument in [0, 1). The free functions categorical_cross_entropy and sparse_categorical_cross_entropy are the same math without the cached backward.",
         "Softmax logitleri dağılıma çevirir; negatif log-olabilirlik modeli gerçek sınıfa verdiği olasılık için ücretlendirir. NexusLoss ileri değerde softmax'ı açıkça kurmaz: log-sum-exp önce en büyük logiti çıkarır, exp(1000) exp(0) olur. Etiket yumuşatma, [0, 1) aralığında isteğe bağlı kurucu argümanıdır. categorical_cross_entropy ve sparse_categorical_cross_entropy aynı matematiğin önbelleksiz halidir.",
       ),
       gradient: bi(
-        "∂L/∂z = softmax(z) − one_hot(c), with the smoothed target if you passed a smoothing value. Calling backward() before forward() throws.",
-        "∂L/∂z = softmax(z) − one_hot(c); yumuşatma verdiysen hedef yumuşatılmış halidir. forward() olmadan backward() hata fırlatır.",
+        "Per row, ∂L/∂z = softmax(z) − smoothed target. Smoothing s puts s/C on every class and an extra (1 − s) on the labeled class. The facade then multiplies the whole buffer by 1/batch. The one-row class does not. Calling its backward() before forward() throws.",
+        "Satır başına ∂L/∂z = softmax(z) − yumuşatılmış hedef. Yumuşatma s, her sınıfa s/C ve etiketli sınıfa ek (1 − s) koyar. Cephe sonra tamponun tamamını 1/batch ile çarpar. Tek satır sınıfı çarpmaz. Onun backward()'ını forward()'dan önce çağırmak hata fırlatır.",
       ),
-      code: `std::vector<double> logits{1.0, 2.0, 3.0};
-nexusloss::classification::CrossEntropyLoss<double> loss; // smoothing 0
-double value = loss.forward(logits, /*class*/ 2);
-auto gradient = loss.backward(); // softmax - [0, 0, 1]
+      code: `#include "nexus/loss/losses.hpp"
 
-double bare = nexusloss::classification::sparse_categorical_cross_entropy<double>(logits, 2);`,
+float logits[] = {2.f, 0.f, 0.f, 2.f};
+int targets[] = {0, 1};
+float grad[4];
+const float mean = nexus::loss::CrossEntropy(0.0f).forward_backward(
+    logits, targets, /*batch*/ 2, /*classes*/ 2, grad);
+
+std::vector<double> row{1.0, 2.0, 3.0};
+nexusloss::classification::CrossEntropyLoss<double> one_row;
+double value = one_row.forward(row, /*class*/ 2);
+auto row_grad = one_row.backward();`,
       params: [
         { name: "label_smoothing", detail: bi("Default 0. Must be in [0, 1).", "Varsayılan 0. [0, 1) içinde olmalı.") },
         { name: "target", detail: bi("Class index, not a one-hot vector.", "Tek-sıcak vektör değil, sınıf indeksi.") },

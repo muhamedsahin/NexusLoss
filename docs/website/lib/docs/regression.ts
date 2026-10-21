@@ -5,37 +5,43 @@ export const regression: CategoryDoc = {
   index: "01",
   title: bi("Regression", "Regresyon"),
   lede: bi(
-    "Element-wise objectives for continuous targets. Every class inherits LossBase, so forward() caches the inputs and backward() returns dL/d(prediction), already scaled by Mean, Sum or None.",
-    "Sürekli hedefler için eleman bazlı amaçlar. Her sınıf LossBase'den türer: forward() girdileri saklar, backward() tahmine göre türevi Mean, Sum veya None ölçeğiyle döndürür.",
+    "Nexus calls nexus::loss::MSE::forward_backward(prediction, target, n, grad). That path always returns the mean square and writes 2(x − y) / n. The classes below are LossBase: forward() caches the inputs and backward() returns dL/d(prediction), scaled by Mean, Sum or None.",
+    "Nexus, nexus::loss::MSE::forward_backward(prediction, target, n, grad) çağırır. O yol her zaman karelerin ortalamasını döndürür ve 2(x − y) / n yazar. Alttaki sınıflar LossBase'tir: forward() girdileri saklar, backward() türevi Mean, Sum veya None ölçeğiyle döndürür.",
   ),
   losses: [
     {
       id: "mse",
       name: "MSE",
-      api: "nexusloss::MSELoss<T>",
-      formula: "L = (x − y)²",
-      kind: bi("Element-wise · LossBase", "Eleman bazlı · LossBase"),
+      api: "nexus::loss::MSE · nexusloss::MSELoss<T>",
+      formula: "L = mean (x − y)²",
+      kind: bi("Facade mean · LossBase family", "Cephe ortalaması · LossBase ailesi"),
       when: bi(
-        "Use it when the target is a clean continuous value and large mistakes should dominate the update. It is the default for regression heads, value functions and reconstruction terms whose noise is roughly Gaussian.",
-        "Hedef temiz bir sürekli değerse ve büyük hataların güncellemeye hükmetmesini istiyorsan bunu kullan. Gürültüsü kabaca Gauss olan regresyon başları, değer fonksiyonları ve rekonstrüksiyon terimleri için varsayılan seçimdir.",
+        "Use the facade when the training step should return the mean and write the gradient into a caller buffer. Use MSELoss when you need Sum or None, or a cached forward() / backward() pair. The facade does not take a reduction argument.",
+        "Eğitim adımı ortalamayı döndürüp gradyanı çağıranın tamponuna yazsın istiyorsan cepheyi kullan. Sum, None veya önbellekli forward() / backward() çifti gerekiyorsa MSELoss kullan. Cephe indirgeme argümanı almaz.",
       ),
       logic: bi(
         "Squaring the residual makes the loss smooth at zero and grows without a bound. A point that is twice as wrong contributes four times as much, so the optimizer spends its budget on the worst predictions. That is useful when outliers are real signal, and harmful when they are sensor glitches.",
         "Artığın karesi, kaybı sıfırda pürüzsüz kılar ve üstten sınır koymaz. İki kat yanlış bir nokta dört kat katkı verir; optimize edici bütçesini en kötü tahminlere harcar. Aykırı değer gerçek sinyalse bu iyidir, sensör hatasıysa zararlıdır.",
       ),
       gradient: bi(
-        "∂L/∂x = 2(x − y) before reduction. Mean divides every component by N. The gradient grows linearly with the error, which is why a single wild target can destabilize a step.",
-        "İndirgemeden önce ∂L/∂x = 2(x − y). Mean her bileşeni N'ye böler. Gradyan hatayla doğrusal büyür; tek bir uç hedef bir adımı bozabilir.",
+        "The facade writes grad[i] = 2(x − y) / n and returns the mean of the squares. MSELoss with the default Mean reduction matches that scale. Sum leaves the 2(x − y) term unscaled.",
+        "Cephe grad[i] = 2(x − y) / n yazar ve karelerin ortalamasını döndürür. Varsayılan Mean indirgemeli MSELoss aynı ölçektedir. Sum, 2(x − y) terimini ölçeklemez.",
       ),
-      code: `#include <nexusloss/nexusloss.hpp>
+      code: `#include "nexus/loss/losses.hpp"
+#include <nexusloss/losses/regression.hpp>
 #include <vector>
 
-std::vector<double> prediction{2.0, 4.0, 3.0};
-std::vector<double> target{1.0, 5.0, 2.5};
+std::vector<float> prediction{1.0f, 2.0f};
+std::vector<float> target{1.0f, 0.0f};
+std::vector<float> grad(prediction.size());
+const float mean = nexus::loss::MSE().forward_backward(
+    prediction.data(), target.data(), static_cast<int>(prediction.size()), grad.data());
 
-nexusloss::MSELoss<double> loss; // Mean
-double value = loss.forward(prediction, target).front();
-std::vector<double> gradient = loss.backward();`,
+nexusloss::MSELoss<double> family; // Mean, cached forward / backward
+std::vector<double> wide{2.0, 4.0, 3.0};
+std::vector<double> goal{1.0, 5.0, 2.5};
+double value = family.forward(wide, goal).front();
+auto family_grad = family.backward();`,
       params: [
         { name: "reduction", detail: bi("Mean (default), Sum, None or BatchMean.", "Mean (varsayılan), Sum, None veya BatchMean.") },
       ],

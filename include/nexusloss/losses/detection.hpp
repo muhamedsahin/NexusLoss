@@ -157,75 +157,95 @@ void enclosing_partials(std::span<const T> prediction, std::span<const T> target
 
 } // namespace detail
 
+namespace detail {
+
+template<typename T>
+void require_box_gradient(std::span<T> grad_out) {
+    if (grad_out.size() != 4) throw std::invalid_argument("NexusLoss: box grad_out must have four entries");
+}
+
+} // namespace detail
+
 /**
- * @brief 1 - IoU kaybinin kutu koordinatlarina gore turevi (x1,y1,x2,y2).
+ * @brief 1 - IoU kaybinin kutu koordinatlarina gore turevi (x1,y1,x2,y2); ayirmasiz.
  *
  * Kesisim kenari, min/max hangi kutuya aitse o koordinata akar. Iki kutu
  * ic ice degil de kenarlari ayni hizada ise subgradyan tek tarafa yazilir;
  * testler kesisen ve hizasi kaymis kutular kullanmalidir.
  */
 template<typename T>
-std::vector<T> iou_loss_gradient(std::span<const T> prediction, std::span<const T> target) {
+void iou_loss_gradient_into(std::span<const T> prediction, std::span<const T> target, std::span<T> grad_out) {
+    detail::require_box_gradient(grad_out);
     const auto parts = detail::box_parts<T>(prediction, target);
     T d_inter[4], d_area[4];
     detail::intersection_partials(parts, d_inter);
     detail::area_partials(prediction, d_area);
     const T denom = std::max(parts.union_area, core::epsilon<T>);
-    std::vector<T> grad(4);
-    for (int i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < 4; ++i) {
         const T d_union = d_area[i] - d_inter[i];
         const T d_iou = (d_inter[i] * denom - parts.inter * d_union) / (denom * denom);
-        grad[static_cast<size_t>(i)] = -d_iou;
+        grad_out[i] = -d_iou;
     }
+}
+
+template<typename T>
+std::vector<T> iou_loss_gradient(std::span<const T> prediction, std::span<const T> target) {
+    std::vector<T> grad(4);
+    iou_loss_gradient_into<T>(prediction, target, grad);
     return grad;
 }
 
 template<typename T>
-std::vector<T> giou_loss_gradient(std::span<const T> prediction, std::span<const T> target) {
-    auto grad = iou_loss_gradient(prediction, target);
+void giou_loss_gradient_into(std::span<const T> prediction, std::span<const T> target, std::span<T> grad_out) {
+    iou_loss_gradient_into<T>(prediction, target, grad_out);
     const auto parts = detail::box_parts<T>(prediction, target);
     T c_area = T(0), d_c[4], d_inter[4], d_area[4];
     detail::enclosing_partials(prediction, target, c_area, d_c);
     detail::intersection_partials(parts, d_inter);
     detail::area_partials(prediction, d_area);
     const T safe_c = std::max(c_area, core::epsilon<T>);
-    for (int i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < 4; ++i) {
         const T d_union = d_area[i] - d_inter[i];
-        const T d_penalty = -(d_union * safe_c - parts.union_area * d_c[i]) / (safe_c * safe_c);
-        grad[static_cast<size_t>(i)] += d_penalty;
+        grad_out[i] += -(d_union * safe_c - parts.union_area * d_c[i]) / (safe_c * safe_c);
     }
+}
+
+template<typename T>
+std::vector<T> giou_loss_gradient(std::span<const T> prediction, std::span<const T> target) {
+    std::vector<T> grad(4);
+    giou_loss_gradient_into<T>(prediction, target, grad);
     return grad;
 }
 
 template<typename T>
-std::vector<T> diou_loss_gradient(std::span<const T> prediction, std::span<const T> target) {
-    auto grad = iou_loss_gradient(prediction, target);
+void diou_loss_gradient_into(std::span<const T> prediction, std::span<const T> target, std::span<T> grad_out) {
+    iou_loss_gradient_into<T>(prediction, target, grad_out);
     const T dx = (prediction[0] + prediction[2] - target[0] - target[2]) / T(2);
     const T dy = (prediction[1] + prediction[3] - target[1] - target[3]) / T(2);
     const T rho2 = dx * dx + dy * dy;
-    T c_area = T(0), d_c_unused[4];
-    detail::enclosing_partials(prediction, target, c_area, d_c_unused);
     const T cw = std::max(prediction[2], target[2]) - std::min(prediction[0], target[0]);
     const T ch = std::max(prediction[3], target[3]) - std::min(prediction[1], target[1]);
     const T c2 = std::max(cw * cw + ch * ch, core::epsilon<T>);
-    T d_c2[4] = {
+    const T d_c2[4] = {
         T(2) * cw * (prediction[0] <= target[0] ? T(-1) : T(0)),
         T(2) * ch * (prediction[1] <= target[1] ? T(-1) : T(0)),
         T(2) * cw * (prediction[2] >= target[2] ? T(1) : T(0)),
         T(2) * ch * (prediction[3] >= target[3] ? T(1) : T(0))
     };
     const T d_rho[4] = {dx, dy, dx, dy};
-    for (int i = 0; i < 4; ++i) {
-        const T d_ratio = (d_rho[i] * c2 - rho2 * d_c2[i]) / (c2 * c2);
-        grad[static_cast<size_t>(i)] += d_ratio;
-    }
-    (void)c_area;
+    for (size_t i = 0; i < 4; ++i) grad_out[i] += (d_rho[i] * c2 - rho2 * d_c2[i]) / (c2 * c2);
+}
+
+template<typename T>
+std::vector<T> diou_loss_gradient(std::span<const T> prediction, std::span<const T> target) {
+    std::vector<T> grad(4);
+    diou_loss_gradient_into<T>(prediction, target, grad);
     return grad;
 }
 
 template<typename T>
-std::vector<T> ciou_loss_gradient(std::span<const T> prediction, std::span<const T> target) {
-    auto grad = diou_loss_gradient(prediction, target);
+void ciou_loss_gradient_into(std::span<const T> prediction, std::span<const T> target, std::span<T> grad_out) {
+    diou_loss_gradient_into<T>(prediction, target, grad_out);
     const auto parts = detail::box_parts<T>(prediction, target);
     const T pi = std::acos(T(-1));
     const T wp = prediction[2] - prediction[0];
@@ -240,14 +260,20 @@ std::vector<T> ciou_loss_gradient(std::span<const T> prediction, std::span<const
     const T d_atan_hp = -wp / denom_atan;
     const T d_v_wp = (T(8) / (pi * pi)) * angle_delta * (-d_atan_wp);
     const T d_v_hp = (T(8) / (pi * pi)) * angle_delta * (-d_atan_hp);
-    T d_v[4] = {-d_v_wp, -d_v_hp, d_v_wp, d_v_hp};
-    auto d_iou = iou_loss_gradient(prediction, target);
-    for (T& value : d_iou) value = -value;
-    for (int i = 0; i < 4; ++i) {
-        const T d_u = -d_iou[static_cast<size_t>(i)] + d_v[i];
-        const T d_alpha_v = (T(2) * v * d_v[i] * u - v * v * d_u) / (u * u);
-        grad[static_cast<size_t>(i)] += d_alpha_v;
+    const T d_v[4] = {-d_v_wp, -d_v_hp, d_v_wp, d_v_hp};
+    T d_loss_iou[4];
+    iou_loss_gradient_into<T>(prediction, target, std::span<T>(d_loss_iou, 4));
+    for (size_t i = 0; i < 4; ++i) {
+        // d_loss_iou = d(1 - IoU), dolayisiyla d(1 - IoU + v) = d_loss_iou + d_v.
+        const T d_u = d_loss_iou[i] + d_v[i];
+        grad_out[i] += (T(2) * v * d_v[i] * u - v * v * d_u) / (u * u);
     }
+}
+
+template<typename T>
+std::vector<T> ciou_loss_gradient(std::span<const T> prediction, std::span<const T> target) {
+    std::vector<T> grad(4);
+    ciou_loss_gradient_into<T>(prediction, target, grad);
     return grad;
 }
 
@@ -278,13 +304,19 @@ public:
         return sum / static_cast<T>(logits.size());
     }
 
+    [[nodiscard]] size_t gradient_size() const noexcept { return cached_logits_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        std::vector<T> grad(cached_logits_.size());
+        if (grad_out.size() != cached_logits_.size())
+            throw std::invalid_argument("NexusLoss: grad_out boyutu pred ile ayni olmali");
         const T inv = T(1) / static_cast<T>(cached_logits_.size());
         for (size_t i = 0; i < cached_logits_.size(); ++i)
-            grad[i] = element_gradient(cached_logits_[i], cached_target_[i]) * inv;
-        return grad;
+            grad_out[i] = element_gradient(cached_logits_[i], cached_target_[i]) * inv;
     }
 
 private:
@@ -342,16 +374,22 @@ public:
         }
         return sum / static_cast<T>(prediction.size());
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return cached_prediction_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        std::vector<T> grad(cached_prediction_.size());
-        const T inv = T(1) / static_cast<T>(grad.size());
-        for (size_t i = 0; i < grad.size(); ++i) {
+        if (grad_out.size() != cached_prediction_.size())
+            throw std::invalid_argument("NexusLoss: grad_out boyutu pred ile ayni olmali");
+        const T inv = T(1) / static_cast<T>(grad_out.size());
+        for (size_t i = 0; i < grad_out.size(); ++i) {
             const T diff = cached_prediction_[i] - cached_target_[i];
             const T raw = std::abs(diff) <= beta_ ? diff : (diff > T(0) ? beta_ : -beta_);
-            grad[i] = raw * inv;
+            grad_out[i] = raw * inv;
         }
-        return grad;
     }
 private:
     T beta_;
@@ -359,20 +397,83 @@ private:
     bool ready_ = false;
 };
 
+/// IoU ailesinin secimi. Kutu basina kayip ve turev ayni anahtarla eslesir.
+enum class BoxLossKind { IoU, GIoU, DIoU, CIoU };
+
+namespace detail {
+
+template<typename T>
+T box_loss(BoxLossKind kind, std::span<const T> prediction, std::span<const T> target) {
+    switch (kind) {
+        case BoxLossKind::IoU: return iou_loss(prediction, target);
+        case BoxLossKind::GIoU: return giou_loss(prediction, target);
+        case BoxLossKind::DIoU: return diou_loss(prediction, target);
+        case BoxLossKind::CIoU: return ciou_loss(prediction, target);
+    }
+    throw std::invalid_argument("NexusLoss: unknown box loss kind");
+}
+
+template<typename T>
+void box_loss_gradient_into(BoxLossKind kind, std::span<const T> prediction, std::span<const T> target,
+                            std::span<T> grad_out) {
+    switch (kind) {
+        case BoxLossKind::IoU: iou_loss_gradient_into<T>(prediction, target, grad_out); return;
+        case BoxLossKind::GIoU: giou_loss_gradient_into<T>(prediction, target, grad_out); return;
+        case BoxLossKind::DIoU: diou_loss_gradient_into<T>(prediction, target, grad_out); return;
+        case BoxLossKind::CIoU: ciou_loss_gradient_into<T>(prediction, target, grad_out); return;
+    }
+    throw std::invalid_argument("NexusLoss: unknown box loss kind");
+}
+
+} // namespace detail
+
+/**
+ * @class IoULoss
+ * @brief Kutu regresyon kaybi. Girdi [N, 4] duz kutu dizisidir; kayip N kutunun
+ *        ortalamasidir, turev ayni duzende 1/N ile olceklenir. N = 1 tek kutudur.
+ *
+ * GIoU/DIoU/CIoU ayni sinifi kendi `BoxLossKind` anahtariyla kurar.
+ */
 template<typename T>
 class IoULoss {
 public:
-    T forward(std::span<const T> prediction, std::span<const T> target) { remember(prediction, target); return iou_loss(prediction, target); }
-    std::vector<T> backward() const { ensure(); return iou_loss_gradient<T>(prediction_, target_); }
-protected:
-    void remember(std::span<const T> prediction, std::span<const T> target) {
+    IoULoss() : kind_(BoxLossKind::IoU) {}
+
+    T forward(std::span<const T> prediction, std::span<const T> target) {
+        if (prediction.empty() || prediction.size() % 4 || prediction.size() != target.size())
+            throw std::invalid_argument("NexusLoss: box losses expect matching [N, 4] arrays");
         prediction_.assign(prediction.begin(), prediction.end());
         target_.assign(target.begin(), target.end());
         ready_ = true;
+        const size_t boxes = prediction.size() / 4;
+        T sum = T(0);
+        for (size_t box = 0; box < boxes; ++box)
+            sum += detail::box_loss<T>(kind_, prediction.subspan(box * 4, 4), target.subspan(box * 4, 4));
+        return sum / static_cast<T>(boxes);
     }
-    void ensure() const {
+    [[nodiscard]] size_t gradient_size() const noexcept { return prediction_.size(); }
+    std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
+        if (grad_out.size() != prediction_.size())
+            throw std::invalid_argument("NexusLoss: grad_out boyutu pred ile ayni olmali");
+        const std::span<const T> prediction(prediction_), target(target_);
+        const size_t boxes = prediction.size() / 4;
+        const T inv = T(1) / static_cast<T>(boxes);
+        for (size_t box = 0; box < boxes; ++box) {
+            const std::span<T> slot = grad_out.subspan(box * 4, 4);
+            detail::box_loss_gradient_into<T>(kind_, prediction.subspan(box * 4, 4), target.subspan(box * 4, 4), slot);
+            for (T& value : slot) value *= inv;
+        }
     }
+protected:
+    explicit IoULoss(BoxLossKind kind) : kind_(kind) {}
+private:
+    BoxLossKind kind_;
     std::vector<T> prediction_, target_;
     bool ready_ = false;
 };
@@ -380,31 +481,19 @@ protected:
 template<typename T>
 class GIoULoss : public IoULoss<T> {
 public:
-    T forward(std::span<const T> prediction, std::span<const T> target) {
-        this->remember(prediction, target);
-        return giou_loss(prediction, target);
-    }
-    std::vector<T> backward() const { this->ensure(); return giou_loss_gradient<T>(this->prediction_, this->target_); }
+    GIoULoss() : IoULoss<T>(BoxLossKind::GIoU) {}
 };
 
 template<typename T>
 class DIoULoss : public IoULoss<T> {
 public:
-    T forward(std::span<const T> prediction, std::span<const T> target) {
-        this->remember(prediction, target);
-        return diou_loss(prediction, target);
-    }
-    std::vector<T> backward() const { this->ensure(); return diou_loss_gradient<T>(this->prediction_, this->target_); }
+    DIoULoss() : IoULoss<T>(BoxLossKind::DIoU) {}
 };
 
 template<typename T>
 class CIoULoss : public IoULoss<T> {
 public:
-    T forward(std::span<const T> prediction, std::span<const T> target) {
-        this->remember(prediction, target);
-        return ciou_loss(prediction, target);
-    }
-    std::vector<T> backward() const { this->ensure(); return ciou_loss_gradient<T>(this->prediction_, this->target_); }
+    CIoULoss() : IoULoss<T>(BoxLossKind::CIoU) {}
 };
 
 } // namespace nexusloss::detection

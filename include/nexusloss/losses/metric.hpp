@@ -125,44 +125,63 @@ T sphereface_loss(std::span<const T> cosine_logits, size_t target, T margin = T(
     return angular_margin_cross_entropy(cosine_logits, target, margin, scale, 2);
 }
 
-/// @brief Kontrastif kaybin iki embedding'e gore turevi. Donus [a | b] birlestirilmis.
+/// @brief Kontrastif kaybin iki embedding'e gore turevi. grad_out = [a | b], ayirmasiz.
+template<typename T>
+void contrastive_loss_gradient_into(std::span<const T> a, std::span<const T> b, bool same_class,
+                                    std::span<T> grad_out, T margin = T(1)) {
+    if (grad_out.size() != a.size() * 2)
+        throw std::invalid_argument("NexusLoss: contrastive grad_out must hold [a | b]");
+    const T distance = std::max(euclidean_distance(a, b), core::epsilon<T>);
+    T scale = T(0);
+    if (same_class) scale = T(2) * distance;
+    else if (distance < margin) scale = T(-2) * (margin - distance);
+    const T factor = scale / distance;
+    for (size_t i = 0; i < a.size(); ++i) {
+        const T value = factor * (a[i] - b[i]);
+        grad_out[i] = value;
+        grad_out[a.size() + i] = -value;
+    }
+}
+
 template<typename T>
 std::vector<T> contrastive_loss_gradient(std::span<const T> a, std::span<const T> b, bool same_class,
                                          T margin = T(1)) {
-    const T distance = std::max(euclidean_distance(a, b), core::epsilon<T>);
-    std::vector<T> grad(a.size() * 2, T(0));
-    auto write = [&](T scale) {
-        for (size_t i = 0; i < a.size(); ++i) {
-            const T direction = (a[i] - b[i]) / distance;
-            grad[i] = scale * direction;
-            grad[a.size() + i] = -scale * direction;
-        }
-    };
-    if (same_class) write(T(2) * distance);
-    else if (distance < margin) write(T(-2) * (margin - distance));
+    std::vector<T> grad(a.size() * 2);
+    contrastive_loss_gradient_into<T>(a, b, same_class, grad, margin);
     return grad;
 }
 
 /// @brief Triplet kaybinin [anchor | positive | negative] turevi. Margin disinda sifir.
 template<typename T>
-std::vector<T> triplet_loss_gradient(std::span<const T> anchor, std::span<const T> positive,
-                                     std::span<const T> negative, T margin = T(1)) {
+void triplet_loss_gradient_into(std::span<const T> anchor, std::span<const T> positive,
+                                std::span<const T> negative, std::span<T> grad_out, T margin = T(1)) {
     if (anchor.size() != positive.size() || anchor.size() != negative.size())
         throw std::invalid_argument("NexusLoss: triplet embeddings must share a dimension");
     const size_t dim = anchor.size();
-    std::vector<T> grad(dim * 3, T(0));
+    if (grad_out.size() != dim * 3)
+        throw std::invalid_argument("NexusLoss: triplet grad_out must hold [anchor | positive | negative]");
     const T positive_distance = euclidean_distance(anchor, positive);
     const T negative_distance = euclidean_distance(anchor, negative);
-    if (positive_distance - negative_distance + margin <= T(0)) return grad;
-    const T safe_positive = std::max(positive_distance, core::epsilon<T>);
-    const T safe_negative = std::max(negative_distance, core::epsilon<T>);
-    for (size_t i = 0; i < dim; ++i) {
-        const T to_positive = (anchor[i] - positive[i]) / safe_positive;
-        const T to_negative = (anchor[i] - negative[i]) / safe_negative;
-        grad[i] = to_positive - to_negative;
-        grad[dim + i] = -to_positive;
-        grad[dim * 2 + i] = to_negative;
+    if (positive_distance - negative_distance + margin <= T(0)) {
+        std::fill(grad_out.begin(), grad_out.end(), T(0));
+        return;
     }
+    const T inverse_positive = T(1) / std::max(positive_distance, core::epsilon<T>);
+    const T inverse_negative = T(1) / std::max(negative_distance, core::epsilon<T>);
+    for (size_t i = 0; i < dim; ++i) {
+        const T to_positive = (anchor[i] - positive[i]) * inverse_positive;
+        const T to_negative = (anchor[i] - negative[i]) * inverse_negative;
+        grad_out[i] = to_positive - to_negative;
+        grad_out[dim + i] = -to_positive;
+        grad_out[dim * 2 + i] = to_negative;
+    }
+}
+
+template<typename T>
+std::vector<T> triplet_loss_gradient(std::span<const T> anchor, std::span<const T> positive,
+                                     std::span<const T> negative, T margin = T(1)) {
+    std::vector<T> grad(anchor.size() * 3);
+    triplet_loss_gradient_into<T>(anchor, positive, negative, grad, margin);
     return grad;
 }
 
@@ -170,42 +189,50 @@ std::vector<T> triplet_loss_gradient(std::span<const T> anchor, std::span<const 
  * @brief ArcFace/CosFace/SphereFace logit turevi.
  * Hedef kosinüs, margin donusumunden gecer, sonra olceklenir; CE gradyani zincir kuraliyle gelir.
  */
+/**
+ * @brief Acisal marjin turevini `grad_out` icine yazar; bellek ayirmaz.
+ *
+ * Yalnizca hedef sinifin logit'i donusur; diger siniflarin d(logit)/d(cos)
+ * olcegi `scale`'dir. Bu yuzden ara vektor gerekmez: once olceklenmis
+ * logitler `grad_out` icine yazilir, log-sum-exp alinir, sonra yerinde turev.
+ */
+template<typename T>
+void angular_margin_gradient_into(std::span<const T> cosine_logits, size_t target,
+                                  T margin, T scale, int kind, std::span<T> grad_out) {
+    if (cosine_logits.empty() || target >= cosine_logits.size() || margin < T(0) || !(scale > T(0)))
+        throw std::invalid_argument("NexusLoss: invalid angular-margin loss parameters");
+    if (grad_out.size() != cosine_logits.size())
+        throw std::invalid_argument("NexusLoss: angular-margin grad_out must match cosine logits");
+    const T cosine = core::clamp(cosine_logits[target], T(-1), T(1));
+    const T sine = std::sqrt(std::max(T(0), T(1) - cosine * cosine));
+    T target_logit = T(0), d_target = T(1);
+    if (kind == 0) {
+        const T theta = std::acos(cosine);
+        target_logit = std::cos(theta + margin);
+        d_target = sine < core::epsilon<T> ? T(0) : std::sin(theta + margin) / sine;
+    } else if (kind == 1) {
+        target_logit = cosine - margin;
+    } else {
+        const T theta = std::acos(cosine);
+        const T multiplier = T(1) + margin;
+        target_logit = std::cos(theta * multiplier);
+        d_target = sine < core::epsilon<T> ? T(0) : multiplier * std::sin(theta * multiplier) / sine;
+    }
+    for (size_t i = 0; i < cosine_logits.size(); ++i)
+        grad_out[i] = (i == target ? target_logit : cosine_logits[i]) * scale;
+    const T log_z = core::log_sum_exp<T>(std::span<const T>(grad_out.data(), grad_out.size()));
+    for (size_t i = 0; i < grad_out.size(); ++i) {
+        const T probability = std::exp(grad_out[i] - log_z);
+        const T d_logit = probability - (i == target ? T(1) : T(0));
+        grad_out[i] = d_logit * scale * (i == target ? d_target : T(1));
+    }
+}
+
 template<typename T>
 std::vector<T> angular_margin_gradient(std::span<const T> cosine_logits, size_t target,
                                        T margin, T scale, int kind) {
-    if (cosine_logits.empty() || target >= cosine_logits.size() || margin < T(0) || !(scale > T(0)))
-        throw std::invalid_argument("NexusLoss: invalid angular-margin loss parameters");
-    std::vector<T> logits(cosine_logits.size());
-    std::vector<T> d_modified_d_cosine(cosine_logits.size(), T(1));
-    for (size_t i = 0; i < cosine_logits.size(); ++i) {
-        if (i != target) {
-            logits[i] = cosine_logits[i] * scale;
-            continue;
-        }
-        const T cosine = core::clamp(cosine_logits[i], T(-1), T(1));
-        if (kind == 0) {
-            const T theta = std::acos(cosine);
-            const T sine = std::sqrt(std::max(T(0), T(1) - cosine * cosine));
-            logits[i] = std::cos(theta + margin) * scale;
-            d_modified_d_cosine[i] = sine < core::epsilon<T> ? T(0) : std::sin(theta + margin) / sine;
-        } else if (kind == 1) {
-            logits[i] = (cosine - margin) * scale;
-        } else {
-            const T theta = std::acos(cosine);
-            const T multiplier = T(1) + margin;
-            const T sine = std::sqrt(std::max(T(0), T(1) - cosine * cosine));
-            logits[i] = std::cos(theta * multiplier) * scale;
-            d_modified_d_cosine[i] = sine < core::epsilon<T> ? T(0)
-                : multiplier * std::sin(theta * multiplier) / sine;
-        }
-    }
-    const T log_z = core::log_sum_exp<T>(logits);
-    std::vector<T> grad(logits.size());
-    for (size_t i = 0; i < logits.size(); ++i) {
-        const T probability = std::exp(logits[i] - log_z);
-        const T d_logit = probability - (i == target ? T(1) : T(0));
-        grad[i] = d_logit * scale * d_modified_d_cosine[i];
-    }
+    std::vector<T> grad(cosine_logits.size());
+    angular_margin_gradient_into<T>(cosine_logits, target, margin, scale, kind, grad);
     return grad;
 }
 
@@ -220,9 +247,15 @@ public:
         ready_ = true;
         return contrastive_loss(a, b, same_class, margin_);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return a_.size() * 2; }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return contrastive_loss_gradient<T>(a_, b_, same_, margin_);
+        contrastive_loss_gradient_into<T>(a_, b_, same_, grad_out, margin_);
     }
 private:
     T margin_;
@@ -241,9 +274,15 @@ public:
         ready_ = true;
         return triplet_loss(anchor, positive, negative, margin_);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return anchor_.size() * 3; }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return triplet_loss_gradient<T>(anchor_, positive_, negative_, margin_);
+        triplet_loss_gradient_into<T>(anchor_, positive_, negative_, grad_out, margin_);
     }
 private:
     T margin_;
@@ -261,9 +300,15 @@ public:
         ready_ = true;
         return arcface_loss(cosine_logits, target, margin_, scale_);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return cosine_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return angular_margin_gradient<T>(cosine_, target_, margin_, scale_, 0);
+        angular_margin_gradient_into<T>(cosine_, target_, margin_, scale_, 0, grad_out);
     }
 private:
     T margin_, scale_;
@@ -282,9 +327,43 @@ public:
         ready_ = true;
         return cosface_loss(cosine_logits, target, margin_, scale_);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return cosine_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return angular_margin_gradient<T>(cosine_, target_, margin_, scale_, 1);
+        angular_margin_gradient_into<T>(cosine_, target_, margin_, scale_, 1, grad_out);
+    }
+private:
+    T margin_, scale_;
+    std::vector<T> cosine_;
+    size_t target_ = 0;
+    bool ready_ = false;
+};
+
+/// @brief SphereFace (A-Softmax): hedef aci (1 + margin) ile carpilir.
+template<typename T>
+class SphereFaceLoss {
+public:
+    SphereFaceLoss(T margin = T(1), T scale = T(64)) : margin_(margin), scale_(scale) {}
+    T forward(std::span<const T> cosine_logits, size_t target) {
+        cosine_.assign(cosine_logits.begin(), cosine_logits.end());
+        target_ = target;
+        ready_ = true;
+        return sphereface_loss(cosine_logits, target, margin_, scale_);
+    }
+    [[nodiscard]] size_t gradient_size() const noexcept { return cosine_.size(); }
+    std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
+        if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
+        angular_margin_gradient_into<T>(cosine_, target_, margin_, scale_, 2, grad_out);
     }
 private:
     T margin_, scale_;

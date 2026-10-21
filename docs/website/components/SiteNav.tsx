@@ -5,7 +5,7 @@ import type { Lang } from "../lib/docs/types";
 const links = [
   { id: "home", href: "/", en: "Overview", tr: "Genel bakış" },
   { id: "docs", href: "/docs", en: "Docs", tr: "Doküman" },
-  { id: "benchmarks", href: "/#benchmarks", en: "Benchmarks", tr: "Kıyas" },
+  { id: "facade", href: "/#facade", en: "Facade", tr: "Cephe" },
   { id: "contract", href: "/docs#contract", en: "Contract", tr: "Sözleşme" },
 ] as const;
 

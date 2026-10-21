@@ -118,10 +118,37 @@ T margin_ranking_loss(T x1, T x2, T target, T margin = T(0)) {
     return std::max(T(0), -target * (x1 - x2) + margin);
 }
 
+namespace detail {
+
+template<typename T>
+void require_pair_gradient(std::span<T> grad_out) {
+    if (grad_out.size() != 2) throw std::invalid_argument("NexusLoss: pairwise grad_out must have two entries");
+}
+
+template<typename T>
+void validate_list(std::span<const T> scores, std::span<const T> relevance, std::span<T> grad_out) {
+    if (scores.empty() || scores.size() != relevance.size())
+        throw std::invalid_argument("NexusLoss: listwise inputs must have equal non-zero sizes");
+    if (grad_out.size() != scores.size())
+        throw std::invalid_argument("NexusLoss: listwise grad_out must match scores");
+}
+
+} // namespace detail
+
+/// @brief grad_out = [dL/dx1, dL/dx2]. Marjin disinda sifir.
+template<typename T>
+void margin_ranking_gradient_into(T x1, T x2, T target, std::span<T> grad_out, T margin = T(0)) {
+    detail::require_pair_gradient(grad_out);
+    const bool active = -target * (x1 - x2) + margin > T(0);
+    grad_out[0] = active ? -target : T(0);
+    grad_out[1] = active ? target : T(0);
+}
+
 template<typename T>
 std::vector<T> margin_ranking_gradient(T x1, T x2, T target, T margin = T(0)) {
-    if (-target * (x1 - x2) + margin <= T(0)) return {T(0), T(0)};
-    return {-target, target};
+    std::vector<T> grad(2);
+    margin_ranking_gradient_into<T>(x1, x2, target, grad, margin);
+    return grad;
 }
 
 /// @brief RankNet cift kaybi. preferred, other'dan yuksek skor almalidir.
@@ -129,29 +156,79 @@ template<typename T>
 T ranknet_loss(T preferred, T other) { return pairwise_logistic(preferred, other); }
 
 template<typename T>
+void ranknet_gradient_into(T preferred, T other, std::span<T> grad_out) {
+    detail::require_pair_gradient(grad_out);
+    const T d_difference = core::stable_sigmoid(preferred - other) - T(1);
+    grad_out[0] = d_difference;
+    grad_out[1] = -d_difference;
+}
+
+template<typename T>
 std::vector<T> ranknet_gradient(T preferred, T other) {
-    const T difference = preferred - other;
-    const T d_difference = core::stable_sigmoid(difference) - T(1);
-    return {d_difference, -d_difference};
+    std::vector<T> grad(2);
+    ranknet_gradient_into<T>(preferred, other, grad);
+    return grad;
+}
+
+/**
+ * @brief ListNet turevi softmax(skor) - softmax(relevance). `relevance_scratch`
+ *        hedef dagilim icin cagiranin tamponudur; uzunlugu skorla aynidir.
+ */
+template<typename T>
+void listnet_gradient_into(std::span<const T> scores, std::span<const T> relevance, std::span<T> grad_out,
+                           std::span<T> relevance_scratch) {
+    detail::validate_list(scores, relevance, grad_out);
+    if (relevance_scratch.size() != scores.size())
+        throw std::invalid_argument("NexusLoss: ListNet scratch must match scores");
+    core::softmax_into<T>(scores, grad_out);
+    core::softmax_into<T>(relevance, relevance_scratch);
+    for (size_t i = 0; i < scores.size(); ++i) grad_out[i] -= relevance_scratch[i];
 }
 
 template<typename T>
 std::vector<T> listnet_gradient(std::span<const T> scores, std::span<const T> relevance) {
-    if (scores.empty() || scores.size() != relevance.size())
-        throw std::invalid_argument("NexusLoss: ListNet inputs must have equal non-zero sizes");
-    const auto distribution = [](std::span<const T> values) {
-        const T maximum = *std::max_element(values.begin(), values.end());
-        std::vector<T> result(values.size());
-        T sum = T(0);
-        for (size_t i = 0; i < values.size(); ++i) sum += result[i] = std::exp(values[i] - maximum);
-        for (T& value : result) value /= sum;
-        return result;
-    };
-    const auto predicted = distribution(scores);
-    const auto desired = distribution(relevance);
-    std::vector<T> grad(scores.size());
-    for (size_t i = 0; i < scores.size(); ++i) grad[i] = predicted[i] - desired[i];
+    std::vector<T> grad(scores.size()), scratch(scores.size());
+    listnet_gradient_into<T>(scores, relevance, grad, scratch);
     return grad;
+}
+
+/// @brief relevance'a gore azalan, es baglarda kararli siralama. `order` cagiranin tamponudur.
+template<typename T>
+void listmle_order(std::span<const T> relevance, std::span<size_t> order) {
+    if (order.size() != relevance.size())
+        throw std::invalid_argument("NexusLoss: ListMLE order buffer must match relevance");
+    std::iota(order.begin(), order.end(), size_t(0));
+    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) { return relevance[a] > relevance[b]; });
+}
+
+namespace detail {
+
+template<typename T>
+T log_add(T a, T b) {
+    const T maximum = std::max(a, b);
+    return maximum + std::log1p(std::exp(std::min(a, b) - maximum));
+}
+
+/// lse_k = log sum_{j>=k} exp(s_{o_j}); sondan basa tek gecis.
+template<typename T>
+void listmle_suffix(std::span<const T> scores, std::span<const size_t> order, std::span<T> suffix_lse) {
+    const size_t n = scores.size();
+    suffix_lse[n - 1] = scores[order[n - 1]];
+    for (size_t k = n - 1; k-- > 0;) suffix_lse[k] = log_add(scores[order[k]], suffix_lse[k + 1]);
+}
+
+} // namespace detail
+
+/// @brief Siralama ve suffix tablosu hazirken ListMLE degeri: sum_k (lse_k - s_{o_k}).
+template<typename T>
+T listmle_loss_from_order(std::span<const T> scores, std::span<const size_t> order, std::span<T> suffix_lse) {
+    const size_t n = scores.size();
+    if (!n || order.size() != n || suffix_lse.size() != n)
+        throw std::invalid_argument("NexusLoss: ListMLE buffers must match scores");
+    detail::listmle_suffix(scores, order, suffix_lse);
+    T loss = T(0);
+    for (size_t k = 0; k < n; ++k) loss += suffix_lse[k] - scores[order[k]];
+    return loss;
 }
 
 /**
@@ -164,17 +241,31 @@ T listmle_loss(std::span<const T> scores, std::span<const T> relevance) {
     if (scores.empty() || scores.size() != relevance.size())
         throw std::invalid_argument("NexusLoss: ListMLE inputs must have equal non-zero sizes");
     std::vector<size_t> order(scores.size());
-    std::iota(order.begin(), order.end(), 0);
-    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) { return relevance[a] > relevance[b]; });
-    T loss = T(0);
-    for (size_t start = 0; start < order.size(); ++start) {
-        T maximum = scores[order[start]];
-        for (size_t i = start + 1; i < order.size(); ++i) maximum = std::max(maximum, scores[order[i]]);
-        T sum = T(0);
-        for (size_t i = start; i < order.size(); ++i) sum += std::exp(scores[order[i]] - maximum);
-        loss += maximum + std::log(sum) - scores[order[start]];
+    std::vector<T> suffix(scores.size());
+    listmle_order<T>(relevance, order);
+    return listmle_loss_from_order<T>(scores, order, suffix);
+}
+
+/**
+ * @brief Siralama sabitken ListMLE turevi, O(n).
+ *
+ * Plackett-Luce adimi k'nin paydasi lse_k. o_i konumunun turevi
+ * sum_{k<=i} exp(s_{o_i} - lse_k) - 1'dir. Toplam log-uzayda on-ek olarak
+ * tutulur: L_i = logaddexp(L_{i-1}, -lse_i). Her k <= i icin s_{o_i} <= lse_k
+ * oldugundan s_{o_i} + L_i <= log(i+1); ussel tasmaz.
+ */
+template<typename T>
+void listmle_gradient_from_order(std::span<const T> scores, std::span<const size_t> order,
+                                 std::span<T> grad_out, std::span<T> suffix_lse) {
+    const size_t n = scores.size();
+    if (!n || order.size() != n || grad_out.size() != n || suffix_lse.size() != n)
+        throw std::invalid_argument("NexusLoss: ListMLE buffers must match scores");
+    detail::listmle_suffix(scores, order, suffix_lse);
+    T prefix = -suffix_lse[0];
+    for (size_t i = 0; i < n; ++i) {
+        if (i > 0) prefix = detail::log_add(prefix, -suffix_lse[i]);
+        grad_out[order[i]] = std::exp(scores[order[i]] + prefix) - T(1);
     }
-    return loss;
 }
 
 template<typename T>
@@ -182,20 +273,9 @@ std::vector<T> listmle_gradient(std::span<const T> scores, std::span<const T> re
     if (scores.empty() || scores.size() != relevance.size())
         throw std::invalid_argument("NexusLoss: ListMLE inputs must have equal non-zero sizes");
     std::vector<size_t> order(scores.size());
-    std::iota(order.begin(), order.end(), 0);
-    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) { return relevance[a] > relevance[b]; });
-    std::vector<T> grad(scores.size(), T(0));
-    for (size_t start = 0; start < order.size(); ++start) {
-        T maximum = scores[order[start]];
-        for (size_t i = start + 1; i < order.size(); ++i) maximum = std::max(maximum, scores[order[i]]);
-        T sum = T(0);
-        for (size_t i = start; i < order.size(); ++i) sum += std::exp(scores[order[i]] - maximum);
-        for (size_t i = start; i < order.size(); ++i) {
-            const T probability = std::exp(scores[order[i]] - maximum) / sum;
-            grad[order[i]] += probability;
-        }
-        grad[order[start]] -= T(1);
-    }
+    std::vector<T> grad(scores.size()), suffix(scores.size());
+    listmle_order<T>(relevance, order);
+    listmle_gradient_from_order<T>(scores, order, grad, suffix);
     return grad;
 }
 
@@ -207,9 +287,15 @@ public:
         x1_ = x1; x2_ = x2; target_ = target; ready_ = true;
         return margin_ranking_loss(x1, x2, target, margin_);
     }
+    [[nodiscard]] static constexpr size_t gradient_size() noexcept { return 2; }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return margin_ranking_gradient(x1_, x2_, target_, margin_);
+        margin_ranking_gradient_into<T>(x1_, x2_, target_, grad_out, margin_);
     }
 private:
     T margin_, x1_ = T(0), x2_ = T(0), target_ = T(1);
@@ -223,9 +309,15 @@ public:
         preferred_ = preferred; other_ = other; ready_ = true;
         return ranknet_loss(preferred, other);
     }
+    [[nodiscard]] static constexpr size_t gradient_size() noexcept { return 2; }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return ranknet_gradient(preferred_, other_);
+        ranknet_gradient_into<T>(preferred_, other_, grad_out);
     }
 private:
     T preferred_ = T(0), other_ = T(0);
@@ -238,36 +330,59 @@ public:
     T forward(std::span<const T> scores, std::span<const T> relevance) {
         scores_.assign(scores.begin(), scores.end());
         relevance_.assign(relevance.begin(), relevance.end());
+        scratch_.resize(scores.size());
         ready_ = true;
         return listnet_loss(scores, relevance);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return scores_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    /// @note Hedef dagilim nesnenin `scratch_` tamponuna yazilir; es zamanli backward cagrilmaz.
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return listnet_gradient<T>(scores_, relevance_);
+        listnet_gradient_into<T>(scores_, relevance_, grad_out, scratch_);
     }
 private:
     std::vector<T> scores_, relevance_;
+    mutable std::vector<T> scratch_;
     bool ready_ = false;
 };
 
+/// @note Siralama forward'da bir kez yapilir; backward_into ayni permutasyonu kullanir.
 template<typename T>
 class ListMLELoss {
 public:
     T forward(std::span<const T> scores, std::span<const T> relevance) {
+        if (scores.empty() || scores.size() != relevance.size())
+            throw std::invalid_argument("NexusLoss: ListMLE inputs must have equal non-zero sizes");
         scores_.assign(scores.begin(), scores.end());
-        relevance_.assign(relevance.begin(), relevance.end());
+        order_.resize(scores.size());
+        suffix_.resize(scores.size());
+        listmle_order<T>(relevance, order_);
         ready_ = true;
-        return listmle_loss(scores, relevance);
+        return listmle_loss_from_order<T>(scores_, order_, suffix_);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return scores_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return listmle_gradient<T>(scores_, relevance_);
+        listmle_gradient_from_order<T>(scores_, order_, grad_out, suffix_);
     }
 private:
-    std::vector<T> scores_, relevance_;
+    std::vector<T> scores_;
+    std::vector<size_t> order_;
+    mutable std::vector<T> suffix_;
     bool ready_ = false;
 };
 
 } // namespace nexusloss::ranking
 
 #endif
+

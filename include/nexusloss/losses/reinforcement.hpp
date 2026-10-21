@@ -71,34 +71,45 @@ template<typename T>
 T entropy_bonus_loss(std::span<const T> probabilities) { return -entropy_bonus(probabilities); }
 
 template<typename T>
-std::vector<T> policy_gradient(std::span<const T> log_probabilities, std::span<const T> advantages) {
-    if (log_probabilities.empty() || log_probabilities.size() != advantages.size())
+void policy_gradient_into(std::span<const T> log_probabilities, std::span<const T> advantages, std::span<T> grad_out) {
+    if (log_probabilities.empty() || log_probabilities.size() != advantages.size() ||
+        grad_out.size() != log_probabilities.size())
         throw std::invalid_argument("NexusLoss: policy and advantage arrays must have equal non-zero size");
-    std::vector<T> grad(log_probabilities.size());
     const T inv = T(1) / static_cast<T>(log_probabilities.size());
-    for (size_t i = 0; i < grad.size(); ++i) grad[i] = -advantages[i] * inv;
+    for (size_t i = 0; i < grad_out.size(); ++i) grad_out[i] = -advantages[i] * inv;
+}
+
+template<typename T>
+std::vector<T> policy_gradient(std::span<const T> log_probabilities, std::span<const T> advantages) {
+    std::vector<T> grad(log_probabilities.size());
+    policy_gradient_into<T>(log_probabilities, advantages, grad);
     return grad;
 }
 
 template<typename T>
-std::vector<T> value_loss_gradient(std::span<const T> values, std::span<const T> returns) {
-    if (values.empty() || values.size() != returns.size())
+void value_loss_gradient_into(std::span<const T> values, std::span<const T> returns, std::span<T> grad_out) {
+    if (values.empty() || values.size() != returns.size() || grad_out.size() != values.size())
         throw std::invalid_argument("NexusLoss: value and return arrays must have equal non-zero size");
-    std::vector<T> grad(values.size());
     const T scale = T(2) / static_cast<T>(values.size());
-    for (size_t i = 0; i < values.size(); ++i) grad[i] = scale * (values[i] - returns[i]);
+    for (size_t i = 0; i < values.size(); ++i) grad_out[i] = scale * (values[i] - returns[i]);
+}
+
+template<typename T>
+std::vector<T> value_loss_gradient(std::span<const T> values, std::span<const T> returns) {
+    std::vector<T> grad(values.size());
+    value_loss_gradient_into<T>(values, returns, grad);
     return grad;
 }
 
 /// @brief dL / d(new log-prob). Kirpilmis oran secildiyse o adimda turev 0'dir.
 template<typename T>
-std::vector<T> ppo_clipped_surrogate_gradient(std::span<const T> new_log_probabilities,
-                                              std::span<const T> old_log_probabilities,
-                                              std::span<const T> advantages, T clip = T(0.2)) {
+void ppo_clipped_surrogate_gradient_into(std::span<const T> new_log_probabilities,
+                                         std::span<const T> old_log_probabilities,
+                                         std::span<const T> advantages, std::span<T> grad_out, T clip = T(0.2)) {
     if (new_log_probabilities.empty() || new_log_probabilities.size() != old_log_probabilities.size()
-        || new_log_probabilities.size() != advantages.size() || clip < T(0) || clip >= T(1))
+        || new_log_probabilities.size() != advantages.size() || grad_out.size() != advantages.size()
+        || clip < T(0) || clip >= T(1))
         throw std::invalid_argument("NexusLoss: invalid PPO inputs or clipping range");
-    std::vector<T> grad(advantages.size());
     const T inv = T(1) / static_cast<T>(advantages.size());
     for (size_t i = 0; i < advantages.size(); ++i) {
         const T ratio = std::exp(new_log_probabilities[i] - old_log_probabilities[i]);
@@ -106,21 +117,34 @@ std::vector<T> ppo_clipped_surrogate_gradient(std::span<const T> new_log_probabi
         const T clipped_ratio = core::clamp(ratio, T(1) - clip, T(1) + clip);
         const T clipped = clipped_ratio * advantages[i];
         const bool ratio_inside = ratio > T(1) - clip && ratio < T(1) + clip;
-        if (unclipped < clipped || (unclipped == clipped && ratio_inside)) grad[i] = -advantages[i] * ratio * inv;
-        else if (unclipped == clipped) grad[i] = T(0);
-        else grad[i] = T(0);
+        if (unclipped < clipped || (unclipped == clipped && ratio_inside)) grad_out[i] = -advantages[i] * ratio * inv;
+        else grad_out[i] = T(0);
     }
+}
+
+template<typename T>
+std::vector<T> ppo_clipped_surrogate_gradient(std::span<const T> new_log_probabilities,
+                                              std::span<const T> old_log_probabilities,
+                                              std::span<const T> advantages, T clip = T(0.2)) {
+    std::vector<T> grad(advantages.size());
+    ppo_clipped_surrogate_gradient_into<T>(new_log_probabilities, old_log_probabilities, advantages, grad, clip);
     return grad;
 }
 
 template<typename T>
-std::vector<T> entropy_bonus_gradient(std::span<const T> probabilities) {
-    if (probabilities.empty()) throw std::invalid_argument("NexusLoss: entropy input cannot be empty");
-    std::vector<T> grad(probabilities.size());
+void entropy_bonus_gradient_into(std::span<const T> probabilities, std::span<T> grad_out) {
+    if (probabilities.empty() || grad_out.size() != probabilities.size())
+        throw std::invalid_argument("NexusLoss: entropy input cannot be empty");
     for (size_t i = 0; i < probabilities.size(); ++i) {
         if (probabilities[i] < T(0)) throw std::invalid_argument("NexusLoss: probabilities must be non-negative");
-        grad[i] = probabilities[i] > T(0) ? std::log(probabilities[i]) + T(1) : T(0);
+        grad_out[i] = probabilities[i] > T(0) ? std::log(probabilities[i]) + T(1) : T(0);
     }
+}
+
+template<typename T>
+std::vector<T> entropy_bonus_gradient(std::span<const T> probabilities) {
+    std::vector<T> grad(probabilities.size());
+    entropy_bonus_gradient_into<T>(probabilities, grad);
     return grad;
 }
 
@@ -133,9 +157,15 @@ public:
         ready_ = true;
         return policy_gradient_loss(log_probabilities, advantages);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return logs_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return policy_gradient<T>(logs_, advantages_);
+        policy_gradient_into<T>(logs_, advantages_, grad_out);
     }
 private:
     std::vector<T> logs_, advantages_;
@@ -153,9 +183,15 @@ public:
         ready_ = true;
         return ppo_clipped_surrogate_loss(new_logs, old_logs, advantages, clip_);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return new_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return ppo_clipped_surrogate_gradient<T>(new_, old_, advantages_, clip_);
+        ppo_clipped_surrogate_gradient_into<T>(new_, old_, advantages_, grad_out, clip_);
     }
 private:
     T clip_;
@@ -172,9 +208,15 @@ public:
         ready_ = true;
         return value_loss(values, returns);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return values_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return value_loss_gradient<T>(values_, returns_);
+        value_loss_gradient_into<T>(values_, returns_, grad_out);
     }
 private:
     std::vector<T> values_, returns_;
@@ -189,9 +231,15 @@ public:
         ready_ = true;
         return entropy_bonus_loss(probabilities);
     }
+    [[nodiscard]] size_t gradient_size() const noexcept { return probabilities_.size(); }
     std::vector<T> backward() const {
+        std::vector<T> grad(gradient_size());
+        backward_into(grad);
+        return grad;
+    }
+    void backward_into(std::span<T> grad_out) const {
         if (!ready_) throw std::logic_error("NexusLoss: backward() oncesi forward() cagrilmali");
-        return entropy_bonus_gradient<T>(probabilities_);
+        entropy_bonus_gradient_into<T>(probabilities_, grad_out);
     }
 private:
     std::vector<T> probabilities_;

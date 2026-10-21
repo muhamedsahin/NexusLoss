@@ -165,6 +165,48 @@ namespace nexusloss::core {
         return result;
     }
 
+    /**
+     * @brief softmax(x / temperature) degerini `out` icine yazar; bellek ayirmaz.
+     * `out` ile `logits` ayni tampon olabilir.
+     */
+    template<typename T>
+    void softmax_into(std::span<const T> logits, std::span<T> out, T temperature = T(1)) {
+        static_assert(std::is_floating_point_v<T>, "NexusLoss: softmax sadece float/double ile calisir");
+        if (logits.empty() || out.size() != logits.size()) {
+            throw std::invalid_argument("NexusLoss: softmax_into esit ve bos olmayan tampon ister");
+        }
+        if (!(temperature > T(0))) {
+            throw std::invalid_argument("NexusLoss: softmax sicakligi pozitif olmali");
+        }
+        const T inverse = T(1) / temperature;
+        const T maximum = *std::max_element(logits.begin(), logits.end()) * inverse;
+        T sum = T(0);
+        for (std::size_t i = 0; i < logits.size(); ++i) {
+            out[i] = std::exp(logits[i] * inverse - maximum);
+            sum += out[i];
+        }
+        const T normalizer = T(1) / std::max(sum, epsilon<T>);
+        for (T& value : out) value *= normalizer;
+    }
+
+    /// @brief log(softmax(x / temperature)) degerini `out` icine yazar; bellek ayirmaz.
+    template<typename T>
+    void log_softmax_into(std::span<const T> logits, std::span<T> out, T temperature = T(1)) {
+        static_assert(std::is_floating_point_v<T>, "NexusLoss: log_softmax sadece float/double ile calisir");
+        if (logits.empty() || out.size() != logits.size()) {
+            throw std::invalid_argument("NexusLoss: log_softmax_into esit ve bos olmayan tampon ister");
+        }
+        if (!(temperature > T(0))) {
+            throw std::invalid_argument("NexusLoss: softmax sicakligi pozitif olmali");
+        }
+        const T inverse = T(1) / temperature;
+        const T maximum = *std::max_element(logits.begin(), logits.end()) * inverse;
+        T sum = T(0);
+        for (T value : logits) sum += std::exp(value * inverse - maximum);
+        const T log_z = maximum + std::log(sum);
+        for (std::size_t i = 0; i < logits.size(); ++i) out[i] = logits[i] * inverse - log_z;
+    }
+
     // Karekök, negatif sayida patlamamasi icin korumali
     template<typename T>
     T safe_sqrt(T x) {

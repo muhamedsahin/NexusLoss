@@ -17,7 +17,9 @@
 #include <span>
 #include <cmath>
 #include <stdexcept>
+#include <type_traits>
 #include "loss_base.hpp"
+#include "../core/fused.hpp"
 
 namespace nexusloss {
 
@@ -58,10 +60,27 @@ namespace nexusloss {
         }
 
         // d/dx (x-y)^2 = 2(x-y). Mean reduction bunu ayrica 1/N ile carpar.
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
+            for (size_t i = 0; i < pred.size(); ++i) grad_out[i] = T(2) * (pred[i] - target[i]);
+        }
         std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
             std::vector<T> grad(pred.size());
-            for (size_t i = 0; i < pred.size(); ++i) grad[i] = T(2) * (pred[i] - target[i]);
+            gradient_element_wise_into(pred, target, grad);
             return grad;
+        }
+
+        /// Tek gecis. Mean/BatchMean gradyani 1/N ile olcekler ve ortalamayi dondurur.
+        double forward_and_backward(std::span<const T> pred, std::span<const T> target, std::span<T> grad_out) {
+            this->require_gradient_span(pred, grad_out);
+            if constexpr (std::is_same_v<T, float>) {
+                const bool mean = this->get_reduction() == core::ReductionType::Mean ||
+                                  this->get_reduction() == core::ReductionType::BatchMean;
+                return fused::mse(pred.data(), target.data(), grad_out.data(), pred.size(), mean ? 0 : 1);
+            }
+            this->gradient_into(pred, target, grad_out);
+            return static_cast<double>(this->compute(pred, target)[0]);
         }
     };
 
@@ -102,13 +121,28 @@ namespace nexusloss {
         }
 
         // Subgradyan: sign(x-y). Tam esitlikte 0 secilir (simetrik subgradyan).
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 const T diff = pred[i] - target[i];
-                grad[i] = diff > T(0) ? T(1) : (diff < T(0) ? T(-1) : T(0));
+                grad_out[i] = diff > T(0) ? T(1) : (diff < T(0) ? T(-1) : T(0));
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
+        }
+        double forward_and_backward(std::span<const T> pred, std::span<const T> target, std::span<T> grad_out) {
+            this->require_gradient_span(pred, grad_out);
+            if constexpr (std::is_same_v<T, float>) {
+                const bool mean = this->get_reduction() == core::ReductionType::Mean ||
+                                  this->get_reduction() == core::ReductionType::BatchMean;
+                return fused::mae(pred.data(), target.data(), grad_out.data(), pred.size(), mean ? 0 : 1);
+            }
+            this->gradient_into(pred, target, grad_out);
+            return static_cast<double>(this->compute(pred, target)[0]);
         }
     };
 
@@ -130,14 +164,30 @@ namespace nexusloss {
         }
 
         // |hata| <= delta iken turev ham hata (L2 bolgesi), disarida delta * sign (L1 bolgesi).
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 const T diff = pred[i] - target[i];
                 const T magnitude = std::abs(diff);
-                grad[i] = magnitude <= delta_ ? diff : (diff > T(0) ? delta_ : -delta_);
+                grad_out[i] = magnitude <= delta_ ? diff : (diff > T(0) ? delta_ : -delta_);
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
+        }
+        double forward_and_backward(std::span<const T> pred, std::span<const T> target, std::span<T> grad_out) {
+            this->require_gradient_span(pred, grad_out);
+            if constexpr (std::is_same_v<T, float>) {
+                const bool mean = this->get_reduction() == core::ReductionType::Mean ||
+                                  this->get_reduction() == core::ReductionType::BatchMean;
+                return fused::huber(pred.data(), target.data(), grad_out.data(), pred.size(), static_cast<float>(delta_),
+                                    mean ? 0 : 1);
+            }
+            this->gradient_into(pred, target, grad_out);
+            return static_cast<double>(this->compute(pred, target)[0]);
         }
     };
 
@@ -155,14 +205,20 @@ namespace nexusloss {
         }
 
         // d/dx log(cosh(x-y)) = tanh(x-y). Buyuk |x| icin tanh isaretine doygunlasir, patlamaz.
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        // tanh(|d|) = (1 - exp(-2|d|)) / (1 + exp(-2|d|)). exp buyuk argumanda tasma yapmaz.
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 const T diff = pred[i] - target[i];
                 const T halved = std::exp(T(-2) * std::abs(diff));
                 const T tanh_abs = (T(1) - halved) / (T(1) + halved);
-                grad[i] = diff >= T(0) ? tanh_abs : -tanh_abs;
+                grad_out[i] = diff >= T(0) ? tanh_abs : -tanh_abs;
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
         }
     };
@@ -183,14 +239,19 @@ namespace nexusloss {
         }
 
         // L = (log1p(x) - log1p(y))^2  =>  dL/dx = 2 * hata / (1+x)
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 if (pred[i] < T(0) || target[i] < T(0))
                     throw std::invalid_argument("NexusLoss: MSLE requires non-negative predictions and targets");
                 const T error = std::log1p(pred[i]) - std::log1p(target[i]);
-                grad[i] = T(2) * error / (T(1) + pred[i]);
+                grad_out[i] = T(2) * error / (T(1) + pred[i]);
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
         }
     };
@@ -215,11 +276,16 @@ namespace nexusloss {
 
         // hata = y - x. x < y iken dL/dx = -q (alti tahmini q kadar cezalandir),
         // x > y iken dL/dx = 1-q (ustu tahmini 1-q kadar cezalandir).
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
+            for (size_t i = 0; i < pred.size(); ++i) {
+                grad_out[i] = target[i] >= pred[i] ? -quantile_ : (T(1) - quantile_);
+            }
+        }
         std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
             std::vector<T> grad(pred.size());
-            for (size_t i = 0; i < pred.size(); ++i) {
-                grad[i] = target[i] >= pred[i] ? -quantile_ : (T(1) - quantile_);
-            }
+            gradient_element_wise_into(pred, target, grad);
             return grad;
         }
     };
@@ -239,12 +305,17 @@ namespace nexusloss {
         }
 
         // L = exp(x) - y*x  (x = log oran). dL/dx = exp(x) - y
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 if (target[i] < T(0)) throw std::invalid_argument("NexusLoss: Poisson targets must be non-negative");
-                grad[i] = std::exp(pred[i]) - target[i];
+                grad_out[i] = std::exp(pred[i]) - target[i];
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
         }
     };
@@ -280,14 +351,19 @@ namespace nexusloss {
         }
 
         // Unit-dispersion deviance'in ortalamaya gore turevi: 2 * mean^{-p} * (mean - y)
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 const T mean = pred[i], y = target[i];
                 if (!(mean > T(0)) || y < T(0))
                     throw std::invalid_argument("NexusLoss: Tweedie requires positive predictions and non-negative targets");
-                grad[i] = T(2) * std::pow(mean, -power_) * (mean - y);
+                grad_out[i] = T(2) * std::pow(mean, -power_) * (mean - y);
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
         }
     };
@@ -310,13 +386,18 @@ namespace nexusloss {
         }
 
         // L = 0.5 * s^2 * log(1+(e/s)^2), dL/de = e / (1 + (e/s)^2)
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 const T diff = pred[i] - target[i];
                 const T scaled = diff / scale_;
-                grad[i] = diff / (T(1) + scaled * scaled);
+                grad_out[i] = diff / (T(1) + scaled * scaled);
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
         }
     };
@@ -338,12 +419,17 @@ namespace nexusloss {
             return losses;
         }
 
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 const T diff = pred[i] - target[i];
-                grad[i] = diff / std::sqrt(diff * diff + epsilon_ * epsilon_);
+                grad_out[i] = diff / std::sqrt(diff * diff + epsilon_ * epsilon_);
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
         }
     };
@@ -371,18 +457,23 @@ namespace nexusloss {
         }
 
         // Olcegin icinde psi turevi e*(1-r^2)^2, disarida Influence sifirlanir (redescending).
-        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
-            std::vector<T> grad(pred.size());
+        void gradient_element_wise_into(std::span<const T> pred, std::span<const T> target,
+                                        std::span<T> grad_out) const override {
+            this->require_gradient_span(pred, grad_out);
             for (size_t i = 0; i < pred.size(); ++i) {
                 const T diff = pred[i] - target[i];
                 const T ratio = std::abs(diff) / scale_;
                 if (ratio < T(1)) {
                     const T inner = T(1) - ratio * ratio;
-                    grad[i] = diff * inner * inner;
+                    grad_out[i] = diff * inner * inner;
                 } else {
-                    grad[i] = T(0);
+                    grad_out[i] = T(0);
                 }
             }
+        }
+        std::vector<T> gradient_element_wise(std::span<const T> pred, std::span<const T> target) const override {
+            std::vector<T> grad(pred.size());
+            gradient_element_wise_into(pred, target, grad);
             return grad;
         }
     };

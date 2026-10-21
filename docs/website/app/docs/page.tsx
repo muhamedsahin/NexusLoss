@@ -9,27 +9,27 @@ import { useLocale } from "../../lib/use-locale";
 const ui = {
   navDocs: { en: "Docs", tr: "Doküman" },
   navHome: { en: "Overview", tr: "Genel bakış" },
-  navBench: { en: "Benchmarks", tr: "Kıyas" },
-  navApi: { en: "Contract", tr: "Sözleşme" },
+  navBench: { en: "Facade", tr: "Cephe" },
+  navApi: { en: "Facade", tr: "Cephe" },
   start: { en: "Quick start", tr: "Hızlı başlangıç" },
   search: { en: "Search losses", tr: "Loss ara" },
   eyebrow: { en: "REFERENCE", tr: "REFERANS" },
   titleA: { en: "Every loss,", tr: "Her loss," },
   titleB: { en: "with the reason.", tr: "gerekçesiyle." },
   lede: {
-    en: "Thirteen families, one header. Each entry says when to reach for the function, what the formula is actually doing, how the gradient behaves, and a snippet that matches the C++20 signatures.",
-    tr: "On üç aile, tek başlık dosyası. Her madde fonksiyonu ne zaman seçeceğini, formülün gerçekte ne yaptığını, gradyanın nasıl davrandığını ve C++20 imzalarıyla örtüşen bir parçayı söyler.",
+    en: "Nexus calls CrossEntropy and MSE. Both write the gradient into the buffer you pass and return the mean. The families below are the headers behind that facade; their snippets match those headers, not a second invented API.",
+    tr: "Nexus, CrossEntropy ve MSE çağırır. İkisi de gradyanı senin verdiğin tampona yazar ve ortalamayı döndürür. Alttaki aileler bu cephenin arkasındaki başlıklardır; parçalar o başlıklarla aynıdır.",
   },
-  contractKicker: { en: "00  /  THE CONTRACT", tr: "00  /  SÖZLEŞME" },
-  contractTitle: { en: "Forward, then backward.", tr: "Önce forward, sonra backward." },
+  contractKicker: { en: "00  /  THE FACADE", tr: "00  /  CEPHE" },
+  contractTitle: { en: "Write the gradient into your buffer.", tr: "Gradyanı kendi tamponuna yaz." },
   contractBody: {
-    en: "Element-wise classes inherit LossBase. forward() checks shapes, reduces, and remembers the inputs. backward() reads that memory. Calling it first throws, on purpose. Structured losses — boxes, CTC, point clouds, lists — keep their own forward and backward, because a box is not a vector of independent residuals.",
-    tr: "Eleman bazlı sınıflar LossBase'den türer. forward() şekilleri kontrol eder, indirger ve girdileri hatırlar. backward() o belleği okur. Onu önce çağırmak bilinçli olarak hata fırlatır. Yapısal kayıplar — kutular, CTC, nokta bulutları, listeler — kendi forward ve backward'larını tutar; çünkü bir kutu, bağımsız artıkların vektörü değildir.",
+    en: "nexus::loss::CrossEntropy(label_smoothing) takes row-major logits and one class index per row. label_smoothing is in [0, 1). forward_backward(logits, targets, batch, classes, grad) returns the mean loss and scales grad by 1/batch. nexus::loss::MSE::forward_backward(prediction, target, n, grad) returns the mean square and writes 2(x − y) / n. In Python, CrossEntropy returns {\"loss\", \"grad\"}. MSE returns a (loss, grad) tuple. Family classes still cache forward() and read it from backward(); calling backward() first throws. The facade does not use that cache.",
+    tr: "nexus::loss::CrossEntropy(label_smoothing) satır-major logit ve satır başına bir sınıf indeksi alır. label_smoothing [0, 1) içindedir. forward_backward(logits, targets, batch, classes, grad) ortalama kaybı döndürür ve grad'ı 1/batch ile ölçekler. nexus::loss::MSE::forward_backward(prediction, target, n, grad) karelerin ortalamasını döndürür ve 2(x − y) / n yazar. Python'da CrossEntropy {\"loss\", \"grad\"} sözlüğü döndürür. MSE (loss, grad) demeti döndürür. Aile sınıfları hâlâ forward() ile önbellekler ve backward() ile okur; backward()'ı önce çağırmak hata fırlatır. Cephe o önbelleği kullanmaz.",
   },
   reductionTitle: { en: "Reduction", tr: "İndirgeme" },
   reductionBody: {
-    en: "Mean divides the scalar and the gradient by N. Sum leaves the gradient unscaled, so it is N times larger. None returns every element and does not scale. BatchMean matches Mean on a flat vector; row-wise losses divide by the batch themselves. Weights, when you pass them, use the weight sum as the Mean denominator and multiply Sum or None element by element.",
-    tr: "Mean, skaleri ve gradyanı N'ye böler. Sum gradyanı ölçeklemez, bu yüzden N kat büyüktür. None her elemanı döndürür ve ölçeklemez. BatchMean düz bir vektörde Mean ile aynıdır; satır bazlı kayıplar batch'e bölmeyi kendileri yapar. Ağırlık verirsen Mean paydası ağırlık toplamıdır; Sum ve None eleman eleman çarpılır.",
+    en: "This enum belongs to LossBase, not to the facade. The facade is always a mean: CrossEntropy divides by batch, MSE divides by n. On LossBase, Mean divides the scalar and the gradient by N. Sum leaves the gradient unscaled. None returns every element and does not scale. BatchMean matches Mean on a flat vector.",
+    tr: "Bu enum LossBase'e aittir, cepheye değil. Cephe her zaman ortalamadır: CrossEntropy batch'e, MSE n'ye böler. LossBase'te Mean skaleri ve gradyanı N'ye böler. Sum gradyanı ölçeklemez. None her elemanı döndürür ve ölçeklemez. BatchMean düz bir vektörde Mean ile aynıdır.",
   },
   when: { en: "When to use it", tr: "Ne zaman kullanılır" },
   logic: { en: "What it is doing", tr: "Ne işe yarar" },
@@ -45,7 +45,12 @@ const ui = {
   autoEn: { en: "outside Turkey · English", tr: "Türkiye dışı · İngilizce" },
   unknown: { en: "location unknown · English", tr: "konum yok · İngilizce" },
   include: { en: "One include", tr: "Tek include" },
-  foot: { en: "Built for people who care about the derivative.", tr: "Türevi önemseyenler için." },
+  foot: { en: "Apache-2.0 · C++20", tr: "Apache-2.0 · C++20" },
+  attrib: "Bu yazılım ekosistemi Bursa Teknik Üniversitesi Bilgisayar Mühendisliği 1. sınıf öğrencisi Muhammed Fatih Şahin tarafından yapay zeka destekli olarak geliştirilmiştir.",
+  pdf: {
+    en: "docs/NexusLoss.pdf was not regenerated. Pandoc is not installed.",
+    tr: "docs/NexusLoss.pdf yenilenmedi. Pandoc kurulu değil.",
+  },
 };
 
 function Icon({ name }: { name: "arrow" | "github" | "copy" | "sun" }) {
@@ -141,7 +146,7 @@ export default function DocsPage() {
       <div className="docs-frame">
         <aside className="docs-side">
           <label className="docs-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={ui.search[lang]} /></label>
-          <a className={active === "contract" ? "side-link current" : "side-link"} href="#contract"><b>00</b>{lang === "tr" ? "Sözleşme" : "Contract"}</a>
+          <a className={active === "contract" ? "side-link current" : "side-link"} href="#contract"><b>00</b>{lang === "tr" ? "Cephe" : "Facade"}</a>
           <a className={active === "reduction" ? "side-link current" : "side-link"} href="#reduction"><b>00</b>{ui.reductionTitle[lang]}</a>
           {filtered.map((category) => (
             <div className="side-group" key={category.id}>
@@ -158,6 +163,7 @@ export default function DocsPage() {
             <div className="eyebrow"><span className="pulse" /> {ui.eyebrow[lang]} · {lossCount} {ui.functions[lang].toUpperCase()}</div>
             <h1>{ui.titleA[lang]}<br /><i>{ui.titleB[lang]}</i></h1>
             <p className="muted">{ui.lede[lang]}</p>
+            <p className="muted">{ui.pdf[lang]}</p>
             <div className="docs-meta">
               <span>{lossCount} {ui.functions[lang]}</span>
               <span className="proof-line" />
@@ -175,10 +181,14 @@ export default function DocsPage() {
               <div className="window-bar"><span><i className="dot red" /><i className="dot yellow" /><i className="dot green" /></span><span>train.cpp</span><button onClick={() => copy("contract", contractCode)}><Icon name="copy" /> {copied === "contract" ? ui.copied[lang] : ui.copy[lang]}</button></div>
               <pre><code>{contractCode}</code></pre>
             </div>
+            <div className="code-window docs-code">
+              <div className="window-bar"><span><i className="dot red" /><i className="dot yellow" /><i className="dot green" /></span><span>train.py</span><button onClick={() => copy("python", pythonCode)}><Icon name="copy" /> {copied === "python" ? ui.copied[lang] : ui.copy[lang]}</button></div>
+              <pre><code>{pythonCode}</code></pre>
+            </div>
             <div className="contract-grid">
-              <div><b>01</b><strong>LossBase</strong><small>{lang === "tr" ? "compute, forward, backward, gradient. Mean gradyanı 1/N ile ölçeklenir." : "compute, forward, backward, gradient. Mean scales the gradient by 1/N."}</small></div>
-              <div><b>02</b><strong>float / double</strong><small>{lang === "tr" ? "Her sınıf bir şablondur. İki tipi karıştırma; span'ler aynı T olmalıdır." : "Every class is a template. Do not mix the two; spans must share T."}</small></div>
-              <div><b>03</b><strong>{ui.include[lang]}</strong><small><code>#include &lt;nexusloss/nexusloss.hpp&gt;</code></small></div>
+              <div><b>01</b><strong>CrossEntropy</strong><small>{lang === "tr" ? "Ortalama kayıp. Gradyan 1/batch. Logitler ham, satır-major." : "Mean loss. Gradient is 1/batch. Logits are raw and row-major."}</small></div>
+              <div><b>02</b><strong>MSE</strong><small>{lang === "tr" ? "mean((x−y)²). grad[i] = 2(x−y)/n. n > 0." : "mean((x−y)²). grad[i] = 2(x−y)/n. n > 0."}</small></div>
+              <div><b>03</b><strong>{ui.include[lang]}</strong><small><code>#include &quot;nexus/loss/losses.hpp&quot;</code></small></div>
             </div>
           </section>
 
@@ -236,7 +246,8 @@ export default function DocsPage() {
           <footer className="footer docs-foot">
             <a className="brand" href="/"><span className="brand-mark">N</span><span>NEXUS<em>LOSS</em></span></a>
             <span>{ui.foot[lang]}</span>
-            <span>MIT · C++20 · 2026</span>
+            <span>v0.1.0</span>
+            <p className="footer-attrib">{ui.attrib}</p>
           </footer>
         </div>
       </div>
@@ -244,15 +255,29 @@ export default function DocsPage() {
   );
 }
 
-const contractCode = `#include <nexusloss/nexusloss.hpp>
+const contractCode = `#include "nexus/loss/losses.hpp"
 #include <vector>
 
-std::vector<double> prediction{2.0, 4.0, 3.0};
-std::vector<double> target{1.0, 5.0, 2.5};
+const std::vector<float> logits{2.0f, 0.0f, 0.0f, 2.0f};
+const std::vector<int> targets{0, 1};
+std::vector<float> ce_grad(logits.size());
+const float ce = nexus::loss::CrossEntropy(0.0f).forward_backward(
+    logits.data(), targets.data(), /*batch*/ 2, /*classes*/ 2, ce_grad.data());
 
-nexusloss::HuberLoss<double> loss(1.0);
-double value = loss.forward(prediction, target).front();
-std::vector<double> gradient = loss.backward();
+const std::vector<float> prediction{1.0f, 2.0f};
+const std::vector<float> target{1.0f, 0.0f};
+std::vector<float> mse_grad(prediction.size());
+const float mse = nexus::loss::MSE().forward_backward(
+    prediction.data(), target.data(), static_cast<int>(prediction.size()), mse_grad.data());`;
 
-loss.set_reduction(nexusloss::core::ReductionType::None);
-auto each = loss.forward(prediction, target);`;
+const pythonCode = `import nexus
+
+ce = nexus.loss.CrossEntropy(0.0).forward_backward(
+    [2.0, 0.0, 0.0, 2.0],
+    [0, 1],
+    2,
+)
+mean_loss = ce["loss"]
+gradient = ce["grad"]
+
+mse_loss, mse_grad = nexus.loss.MSE().forward_backward([1.0, 2.0], [1.0, 0.0])`;
