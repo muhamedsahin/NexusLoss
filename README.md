@@ -1,23 +1,44 @@
-# NexusLoss
+<div align="center">
 
-Bu yazılım ekosistemi Bursa Teknik Üniversitesi Bilgisayar Mühendisliği 1. sınıf öğrencisi Muhammed Fatih Şahin tarafından yapay zeka destekli olarak geliştirilmiştir.
+# 📉 NexusLoss
 
-NexusLoss, bir eğitim adımında tahmin ile hedef arasındaki kaybı ve bu kaybın tahmine göre analitik gradyanını hesaplar. Sürüm **0.1.0**. Lisans **Apache-2.0** (`LICENSE`).
+### Tahmin ile hedef arasındaki kaybı ve analitik gradyanını hesaplayan C++20 kütüphanesi
 
-Nexus (üst depo) bu kitaplığı iki sınıfla çağırır. Başlık `include/nexus/loss/losses.hpp` dosyasındadır; ad alanı `nexus::loss`.
+*Regresyon, sınıflandırma, segmentasyon ve daha fazlası — Nexus eğitim adımının kayıp katmanı.*
 
-- `CrossEntropy(label_smoothing)` — logitler ve sınıf indeksleri. `label_smoothing` `[0, 1)` aralığındadır, varsayılan `0`.
-- `MSE` — aynı uzunluktaki tahmin ve hedef.
+[![Version](https://img.shields.io/badge/s%C3%BCr%C3%BCm-0.1.0-blueviolet?style=for-the-badge)](CMakeLists.txt)
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/20)
+[![AVX2](https://img.shields.io/badge/fused-AVX2-FF6F00?style=for-the-badge)](src/fused_simd.cpp)
+[![License](https://img.shields.io/badge/Lisans-Apache--2.0-D22128?style=for-the-badge&logo=apache&logoColor=white)](LICENSE)
 
-İkisi de gradyanı çağıranın tamponuna yazar ve **ortalama** kaybı döndürür. Kütüphane ağırlık güncellemez, veri yüklemez ve autograd grafı tutmaz.
+[Cephe](#-nexusun-çağırdığı-cephe) • [Kurulum](#-kurulum) • [C++](#-c) • [Python](#-python) • [Belgeler](#-dokümantasyon) • [Nexus](https://github.com/muhamedsahin/Nexus)
 
-Aile başlıkları `include/nexusloss/` altındadır. Çapraz entropi cephesi her satırda `nexusloss::classification::CrossEntropyLoss` kullanır, sonra gradyanı batch boyutuna böler. `MSE` cephesi kare farkın ortalamasını kendisi yazar: eleman türevi `2 (tahmin − hedef)`, ortalama için `1/n`. `float` için ayrıca `nexusloss::fused` (AVX2, `src/fused_simd.cpp`) vardır; cephe o yolu çağırmaz.
+</div>
 
-Bu depoda yayımlanmış hız kıyası yoktur.
+> Bu yazılım ekosistemi Bursa Teknik Üniversitesi Bilgisayar Mühendisliği 1. sınıf öğrencisi Muhammed Fatih Şahin tarafından yapay zeka destekli olarak geliştirilmiştir.
 
-## Kurulum
+---
 
-İsterler: CMake 3.20 veya üzeri, C++20 derleyicisi. CMake hedefi statik kitaplık `nexusloss` ve takma ad `nexusloss::nexusloss`tir. Başlıkların çoğu şablondur; AVX2 çekirdeği ayrı çeviri birimidir, bu yüzden tüketici hedefe bağlanır.
+## 🎯 Nexus'un çağırdığı cephe
+
+Başlık `include/nexus/loss/losses.hpp`, ad alanı `nexus::loss`:
+
+| Sınıf | Girdi | Dönüş | Gradyan |
+| --- | --- | --- | --- |
+| `CrossEntropy(label_smoothing)` | logitler + sınıf indeksleri | ortalama kayıp | `softmax − yumuşatılmış hedef`, `1/batch` ölçekli |
+| `MSE` | aynı uzunlukta tahmin + hedef | `mean((t − h)²)` | `2 (t − h) / n` |
+
+İkisi de gradyanı **çağıranın tamponuna** yazar. Kütüphane ağırlık güncellemez, veri yüklemez, autograd grafı tutmaz.
+
+- Aile başlıkları `include/nexusloss/` altındadır. Çapraz entropi cephesi her satırda `nexusloss::classification::CrossEntropyLoss` kullanır.
+- `float` için ayrıca `nexusloss::fused` (AVX2, `src/fused_simd.cpp`) vardır; cephe o yolu çağırmaz.
+- Nexus'un dil modeli eğitmeni artık kaydırmalı kayıp için Nexus'un kendi füzyonlu `fused::cross_entropy_shifted` çekirdeğini kullanır (kopyasız); sınıflandırma `Trainer`'ı bu cepheyi çağırmaya devam eder.
+
+---
+
+## 🛠 Kurulum
+
+CMake 3.20+ ve C++20. Hedef: statik `nexusloss`, takma ad `nexusloss::nexusloss`.
 
 ```cmake
 add_subdirectory(path/to/NexusLoss)
@@ -25,9 +46,7 @@ target_link_libraries(uygulama PRIVATE nexusloss::nexusloss)
 target_compile_features(uygulama PRIVATE cxx_std_20)
 ```
 
-Nexus ağacında üst `CMakeLists.txt` zaten `add_subdirectory(lib/NexusLoss)` çağırır. `nexus::nexus` bu hedefe herkese açık bağlanır ve hem `include/` (cephe) hem `lib/NexusLoss/include` (aileler) yolunu taşır.
-
-Yerel derleme, bu klasörden:
+Nexus ağacında üst `CMakeLists.txt` zaten `add_subdirectory(lib/NexusLoss)` çağırır.
 
 ```powershell
 cmake -S . -B build -DNEXUSLOSS_BUILD_TESTS=ON -DNEXUSLOSS_BUILD_EXAMPLES=ON
@@ -35,24 +54,20 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-`NEXUSLOSS_BUILD_TESTS` ve `NEXUSLOSS_BUILD_EXAMPLES` varsayılan olarak açıktır. Testler GoogleTest v1.14.0 indirir; kapalıyken ağ gerekmez. `examples/main.cpp` aile API’sini (`forward` / `backward`) kullanır, yukarıdaki cepheyi değil.
+<details>
+<summary><b>Derleme ayrıntıları</b></summary>
 
-MSVC arayüz uyarıları `/W4 /utf-8`, `src/fused_simd.cpp` için `/arch:AVX2`. Diğer derleyicilerde `-Wall -Wextra -Wpedantic` ve o dosya için `-mavx2 -mfma`.
+- `NEXUSLOSS_BUILD_TESTS` ve `NEXUSLOSS_BUILD_EXAMPLES` varsayılan açıktır. Testler GoogleTest v1.14.0 indirir; kapalıyken ağ gerekmez.
+- `examples/main.cpp` aile API'sini (`forward` / `backward`) kullanır, cepheyi değil.
+- MSVC: `/W4 /utf-8`, `src/fused_simd.cpp` için `/arch:AVX2`. Diğer derleyiciler: `-Wall -Wextra -Wpedantic`, o dosya için `-mavx2 -mfma`.
 
-### Python
+</details>
 
-`nexus.loss` bu klasörün içinde değildir. Üst depo kökünden, Python 3.11 ile:
+---
 
-```text
-cmake -S . -B build -DNEXUS_BUILD_PYTHON=ON
-cmake --build build --target _core
-```
+## 💻 C++
 
-Modül `python/src/nexus` altına yazılır. İçe aktarmadan önce `PYTHONPATH` olarak `python/src` verilir. Ayrıntı üst depodaki `python/README.md` dosyasındadır.
-
-## C++
-
-Logitler satır-major’dur: uzunluk `batch * classes`. `targets[i]`, `i`. satırın sınıf indeksidir. `grad` ile `logits` aynı uzunluktadır. `batch > 0` ve `classes > 1` olmalıdır. Sınıf indeksi `[0, classes)` dışındaysa `std::invalid_argument` atılır.
+Logitler satır-major'dur (`batch * classes`). `batch > 0`, `classes > 1`; sınıf indeksi `[0, classes)` dışındaysa `std::invalid_argument`.
 
 ```cpp
 #include "nexus/loss/losses.hpp"
@@ -78,36 +93,47 @@ int main() {
 }
 ```
 
-`CrossEntropy::forward_backward` ortalama kaybı döndürür ve `grad` içindeki her elemanı `1/batch` ile çarpar. Satır türevi `softmax(logit) − yumuşatılmış hedef`tir. Yumuşatma `0` iken hedef tek-sıcaktır. Logitlere önceden softmax uygulanmaz.
+Logitlere önceden softmax uygulanmaz. Yumuşatma `0` iken hedef tek-sıcaktır.
 
-`MSE::forward_backward` `mean((tahmin − hedef)²)` döndürür. `n > 0` olmalıdır. `grad[i] = 2 * (prediction[i] − target[i]) / n`.
+---
 
-## Python
+## 🐍 Python
 
-`CrossEntropy.forward_backward(logits, targets, classes)` bir sözlük döndürür: `loss` ortalama kayıp, `grad` logitlerle aynı uzunlukta liste.
+`nexus.loss` üst depodan (Python 3.11) derlenir: `cmake -S . -B build -DNEXUS_BUILD_PYTHON=ON` → `cmake --build build --target _core`, ardından `PYTHONPATH=python/src`.
 
 ```python
 import nexus
 
-ce = nexus.loss.CrossEntropy(0.0).forward_backward(
-    [2.0, 0.0, 0.0, 2.0],
-    [0, 1],
-    2,
-)
-mean_loss = ce["loss"]
-gradient = ce["grad"]  # len == 4
+ce = nexus.loss.CrossEntropy(0.0).forward_backward([2.0, 0.0, 0.0, 2.0], [0, 1], 2)
+mean_loss, gradient = ce["loss"], ce["grad"]   # len(gradient) == 4
+
+loss, grad = nexus.loss.MSE().forward_backward([1.0, 2.0], [1.0, 0.0])   # (loss, grad) çifti
 ```
 
-`MSE.forward_backward(prediction, target)` sözlük değil, `(loss, grad)` çifti döndürür. Uzunluklar eşit ve boş olmayan olmalıdır.
+---
 
-```python
-loss, grad = nexus.loss.MSE().forward_backward([1.0, 2.0], [1.0, 0.0])
-```
+## 📚 Dokümantasyon
 
-## Dokümantasyon
+| Kaynak | Not |
+| --- | --- |
+| `docs/kilavuz.md` | Türkçe anlatım |
+| `docs/website` | Site (`npm install`, ardından `npm run dev`); aile kataloğu `/docs` sayfasında |
+| `docs/NexusLoss.pdf` | Bu turda üretilmedi (Pandoc kurulu değil) |
 
-- Türkçe anlatım: `docs/kilavuz.md`
-- Site: `docs/website` (`npm install`, ardından `npm run dev`)
-- `docs/NexusLoss.pdf` bu turda üretilmedi. Pandoc kurulu değildir; PDF dosyasına dokunulmadı.
+Aile sınıflarının çoğu `forward` ile girdiyi saklar, `backward` ile türevi okur. Bu depoda yayımlanmış hız kıyası **yoktur**.
 
-Aile kataloğu (regresyon, sınıflandırma, segmentasyon ve diğerleri) başlıklardadır ve sitedeki `/docs` sayfasında durur. O sınıfların çoğu `forward` ile girdiyi saklar, `backward` ile türevi okur. Nexus eğitim adımının çağırdığı yüzey yukarıdaki `forward_backward` cephesidir.
+## 📄 Lisans
+
+Apache-2.0 — [`LICENSE`](LICENSE).
+
+---
+
+<div align="center">
+
+**🎓 Bu proje BTÜ (Bursa Teknik Üniversitesi) Bilgisayar Mühendisliği 1. sınıf öğrencisi tarafından yapay zeka destekli olarak yapıldı.**
+
+<sub>Bu yazılım ekosistemi Bursa Teknik Üniversitesi Bilgisayar Mühendisliği 1. sınıf öğrencisi Muhammed Fatih Şahin tarafından yapay zeka destekli olarak geliştirilmiştir.</sub>
+
+<sub>⚡ [Nexus](https://github.com/muhamedsahin/Nexus) ekosisteminin bir parçasıdır.</sub>
+
+</div>
